@@ -4,12 +4,12 @@ import HologramHeader from './components/HologramHeader';
 import Dashboard from './components/Dashboard';
 import IdeaCard from './components/IdeaCard';
 import { Idea, IdeaCategory, SupportedLanguage, DICTIONARY } from './types';
-import { generateBrainstormIdeas, suggestAdminReply } from './services/geminiService';
+import { generateBrainstormIdeas, suggestAdminReply, generateStructuredIdeas } from './services/geminiService';
 import { GoogleGenAI } from "@google/genai";
 import { 
   Plus, Search, Sparkles, X, Sun, Moon, Type, LayoutGrid, 
   BarChart3, Languages, ChevronRight, Filter, AlertCircle, 
-  Shield, Key, LogOut, Trash2, Send, Wand2, Loader2, Check
+  Shield, Key, LogOut, Trash2, Send, Wand2, Loader2, Check, ArrowRight
 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -44,7 +44,7 @@ const App: React.FC = () => {
 
   // AI States
   const [aiTopic, setAiTopic] = useState('');
-  const [aiResult, setAiResult] = useState('');
+  const [aiStructuredResults, setAiStructuredResults] = useState<Partial<Idea>[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
 
   const t = DICTIONARY[language];
@@ -212,15 +212,23 @@ const App: React.FC = () => {
   const handleAIBrainstorm = async () => {
     if (!aiTopic) return;
     setAiLoading(true);
-    setAiResult('');
+    setAiStructuredResults([]);
     try {
-      const result = await generateBrainstormIdeas(aiTopic, newCategory, language === 'nl' ? 'Nederlands' : 'English');
-      setAiResult(result);
+      const results = await generateStructuredIdeas(aiTopic, language === 'nl' ? 'Nederlands' : 'English');
+      setAiStructuredResults(results);
     } catch (err) {
-      setAiResult("Er is een onverwachte fout opgetreden bij de AI-aanroep.");
+      console.error(err);
     } finally {
       setAiLoading(false);
     }
+  };
+
+  const adoptAIIdea = (idea: Partial<Idea>) => {
+    if (idea.title) setNewTitle(idea.title);
+    if (idea.description) setNewDesc(idea.description);
+    if (idea.category) setNewCategory(idea.category as IdeaCategory);
+    setIsAIOpen(false);
+    setIsFormOpen(true);
   };
 
   const filteredAndSortedIdeas = useMemo(() => {
@@ -526,26 +534,61 @@ const App: React.FC = () => {
       {/* AI Modal */}
       {isAIOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-6 bg-slate-900/95 backdrop-blur-xl animate-fade-in">
-           <div className="bg-white dark:bg-slate-900 border-2 border-pink-500/20 rounded-[2.5rem] md:rounded-[3.5rem] w-full max-w-2xl max-h-[90vh] overflow-y-auto p-8 md:p-12 relative overflow-hidden shadow-[0_0_100px_rgba(236,72,153,0.15)]">
+           <div className="bg-white dark:bg-slate-900 border-2 border-pink-500/20 rounded-[2.5rem] md:rounded-[3.5rem] w-full max-w-3xl max-h-[90vh] overflow-y-auto p-8 md:p-12 relative overflow-hidden shadow-[0_0_100px_rgba(236,72,153,0.15)]">
               <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none rotate-12"><Sparkles size={200} className="text-pink-500"/></div>
               <button onClick={() => setIsAIOpen(false)} className="absolute top-6 right-6 text-slate-400 hover:text-white p-2 transition-colors"><X size={28}/></button>
               
-              <h2 className="text-2xl md:text-4xl font-black mb-1 flex items-center gap-3 dark:text-white tracking-tighter uppercase"><Sparkles className="text-pink-500 animate-pulse"/> {t.generateAI}</h2>
-              <div className="space-y-6">
+              <h2 className="text-2xl md:text-4xl font-black mb-1 flex items-center gap-3 dark:text-white tracking-tighter uppercase"><Sparkles className="text-pink-500 animate-pulse"/> AI Brainstorming</h2>
+              <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mb-8">Laat Gemini je helpen met het bedenken van baanbrekende ideeën</p>
+              
+              <div className="space-y-8">
                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Inspiratie Trefwoord</label>
-                    <input type="text" value={aiTopic} onChange={(e)=>setAiTopic(e.target.value)} placeholder="Bijv: Groene mobiliteit, VR zorg..." className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-xl outline-none border-2 border-transparent focus:border-pink-500 font-bold dark:text-white transition-all" disabled={isApiKeyMissing && !aiTopic}/>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Waar wil je over brainstormen?</label>
+                    <div className="flex gap-3">
+                      <input 
+                        type="text" 
+                        value={aiTopic} 
+                        onChange={(e)=>setAiTopic(e.target.value)} 
+                        placeholder="Bijv: 'Groene stroom in de wijk' of 'Zorg voor ouderen'..." 
+                        className="flex-grow bg-slate-50 dark:bg-slate-800 p-4 rounded-xl outline-none border-2 border-transparent focus:border-pink-500 font-bold dark:text-white transition-all"
+                        onKeyDown={(e) => e.key === 'Enter' && handleAIBrainstorm()}
+                      />
+                      <button 
+                        onClick={handleAIBrainstorm} 
+                        disabled={aiLoading || !aiTopic || isApiKeyMissing} 
+                        className="bg-gradient-to-r from-pink-600 to-purple-600 text-white px-8 rounded-xl font-black shadow-lg shadow-pink-600/20 hover:scale-[1.05] transition-all disabled:opacity-30 uppercase text-[10px] tracking-widest"
+                      >
+                        {aiLoading ? <Loader2 size={18} className="animate-spin" /> : <ArrowRight size={18} />}
+                      </button>
+                    </div>
                  </div>
-                 <button onClick={handleAIBrainstorm} disabled={aiLoading || !aiTopic || isApiKeyMissing} className="w-full bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 text-white py-5 rounded-[1.8rem] font-black shadow-2xl shadow-pink-600/30 hover:scale-[1.02] transition-all active:scale-95 disabled:opacity-20 uppercase tracking-[0.2em] text-[10px]">
-                   {aiLoading ? "Synthesizing..." : "Activeer Brainstorm"}
-                 </button>
-                 {aiResult && (
-                   <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-[2rem] mt-6 max-h-60 overflow-y-auto border-2 border-pink-500/10 custom-scrollbar animate-fade-in">
-                     <pre className="whitespace-pre-wrap text-[13px] dark:text-slate-200 font-sans leading-relaxed">{aiResult}</pre>
-                     <div className="mt-6 flex gap-3">
-                       <button onClick={()=>{setNewDesc(aiResult); setIsAIOpen(false); setIsFormOpen(true);}} className="flex-grow py-3.5 bg-white dark:bg-slate-700 dark:text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg hover:bg-slate-50 transition-colors">Importeer Concepten</button>
-                       <button onClick={()=>setAiResult('')} className="p-3.5 bg-slate-200 dark:bg-slate-700 text-slate-500 rounded-xl"><X size={16}/></button>
-                     </div>
+
+                 {aiStructuredResults.length > 0 && (
+                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 animate-slide-up">
+                     {aiStructuredResults.map((result, idx) => (
+                       <div key={idx} className="group flex flex-col justify-between p-6 bg-slate-50 dark:bg-slate-800/50 border-2 border-pink-500/10 rounded-[2rem] hover:border-pink-500/40 transition-all">
+                         <div className="space-y-3">
+                            <span className="text-[8px] font-black uppercase text-pink-500 tracking-widest">{t.categories[result.category as IdeaCategory]}</span>
+                            <h4 className="text-sm font-black dark:text-white leading-tight">{result.title}</h4>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-3 leading-relaxed">{result.description}</p>
+                         </div>
+                         <button 
+                          onClick={() => adoptAIIdea(result)}
+                          className="mt-6 w-full py-3 bg-white dark:bg-slate-700 dark:text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-md hover:bg-pink-500 hover:text-white transition-all group-hover:scale-[1.02]"
+                         >
+                            Dit idee uitwerken
+                         </button>
+                       </div>
+                     ))}
+                   </div>
+                 )}
+
+                 {aiLoading && (
+                   <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+                      <div className="p-4 bg-pink-500/10 rounded-full animate-pulse">
+                        <Sparkles size={40} className="text-pink-500" />
+                      </div>
+                      <p className="text-xs font-black uppercase tracking-widest text-pink-500 animate-pulse">Gemini is aan het nadenken...</p>
                    </div>
                  )}
               </div>
