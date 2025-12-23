@@ -5,14 +5,18 @@ import Dashboard from './components/Dashboard';
 import IdeaCard from './components/IdeaCard';
 import { Idea, IdeaCategory, SupportedLanguage, DICTIONARY } from './types';
 import { generateBrainstormIdeas } from './services/geminiService';
-import { Plus, Search, Sparkles, X, Sun, Moon, Type, LayoutGrid, BarChart3, Languages, ChevronRight, Filter, AlertCircle, Shield, Key, LogOut } from 'lucide-react';
+import { 
+  Plus, Search, Sparkles, X, Sun, Moon, Type, LayoutGrid, 
+  BarChart3, Languages, ChevronRight, Filter, AlertCircle, 
+  Shield, Key, LogOut, Trash2, Send
+} from 'lucide-react';
 
 const App: React.FC = () => {
   // --- States ---
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [language, setLanguage] = useState<SupportedLanguage>('nl');
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'ideas'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'ideas' | 'admin'>('dashboard');
   const [selectedIdeaId, setSelectedIdeaId] = useState<string | null>(null);
   const [highContrast, setHighContrast] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
@@ -22,6 +26,7 @@ const App: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [loginPassword, setLoginPassword] = useState('');
+  const [adminReplyText, setAdminReplyText] = useState<Record<string, string>>({});
 
   // Modal States
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -40,7 +45,6 @@ const App: React.FC = () => {
 
   const t = DICTIONARY[language];
   
-  // EXTRA VEILIGE CHECK VOOR API KEY (Voorkomt zwart scherm)
   const isApiKeyMissing = useMemo(() => {
     try {
       const env = (window as any).process?.env || (typeof process !== 'undefined' ? process.env : null);
@@ -56,9 +60,8 @@ const App: React.FC = () => {
     const savedTheme = localStorage.getItem('digihart-theme') as 'dark' | 'light' || 'dark';
     setTheme(savedTheme);
     
-    // Demo data
     const initial: Idea[] = [
-      { id: '1', title: 'Smart Energy Tiles', description: 'Stoeptegels die energie opwekken wanneer mensen eroverheen lopen.', category: IdeaCategory.SUSTAINABILITY, likes: 45, dislikes: 2, createdAt: new Date(Date.now() - 100000000), author: 'Thomas' },
+      { id: '1', title: 'Smart Energy Tiles', description: 'Stoeptegels die energie opwekken wanneer mensen eroverheen lopen.', category: IdeaCategory.SUSTAINABILITY, likes: 45, dislikes: 2, createdAt: new Date(Date.now() - 100000000), author: 'Thomas', adminResponse: 'Geweldig idee! We kijken of we een pilot kunnen starten op de Grote Markt.' },
       { id: '2', title: 'VR Inclusion Training', description: 'Empathie training via VR om diversiteit op de werkvloer te vergroten.', category: IdeaCategory.INCLUSION, likes: 89, dislikes: 1, createdAt: new Date(Date.now() - 50000000), author: 'Elena' },
       { id: '3', title: 'AI Health Tutor', description: 'Gepersonaliseerde AI assistent voor chronisch zieken.', category: IdeaCategory.HEALTH, likes: 32, dislikes: 12, createdAt: new Date(), author: 'Marcus' }
     ];
@@ -92,9 +95,16 @@ const App: React.FC = () => {
     }
   };
 
+  const handleSaveAdminReply = (id: string) => {
+    const reply = adminReplyText[id];
+    if (!reply) return;
+    setIdeas(prev => prev.map(i => i.id === id ? { ...i, adminResponse: reply } : i));
+    setAdminReplyText(prev => ({ ...prev, [id]: '' }));
+    alert("Reactie opgeslagen!");
+  };
+
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // In een echte app zou dit een server check zijn. Voor nu simpel:
     if (loginPassword === 'admin123') {
       setIsAdmin(true);
       setIsLoginOpen(false);
@@ -122,6 +132,32 @@ const App: React.FC = () => {
     setNewTitle(''); setNewDesc(''); setNewAuthor('');
     setActiveTab('ideas');
     setSelectedIdeaId(idea.id);
+  };
+
+  const handleExport = () => {
+    const headers = ['ID', 'Title', 'Category', 'Author', 'Likes', 'Dislikes', 'Created At', 'Description', 'Admin Response'];
+    const csvData = ideas.map(i => [
+      i.id,
+      `"${i.title.replace(/"/g, '""')}"`,
+      i.category,
+      `"${i.author.replace(/"/g, '""')}"`,
+      i.likes,
+      i.dislikes,
+      i.createdAt.toISOString(),
+      `"${i.description.replace(/"/g, '""')}"`,
+      `"${(i.adminResponse || '').replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = [headers, ...csvData].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `digihart_ideas_${new Date().toLocaleDateString()}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleAIBrainstorm = async () => {
@@ -170,16 +206,14 @@ const App: React.FC = () => {
             <button onClick={() => setActiveTab('ideas')} className={`flex-1 md:flex-none flex items-center justify-center space-x-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all ${activeTab === 'ideas' ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-500 hover:text-cyan-500'}`}>
               <LayoutGrid size={14} /> <span>Ideeën</span>
             </button>
+            {isAdmin && (
+              <button onClick={() => setActiveTab('admin')} className={`flex-1 md:flex-none flex items-center justify-center space-x-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all ${activeTab === 'admin' ? 'bg-rose-600 text-white shadow-lg' : 'text-slate-500 hover:text-rose-500'}`}>
+                <Shield size={14} /> <span>Beheer</span>
+              </button>
+            )}
           </div>
 
           <div className="flex items-center justify-between md:justify-end space-x-3 w-full md:w-auto rtl:space-x-reverse">
-             {isAdmin && (
-               <div className="hidden md:flex items-center space-x-2 px-3 py-1 bg-rose-500/10 border border-rose-500/50 rounded-full text-rose-500 animate-pulse">
-                  <Shield size={12} />
-                  <span className="text-[9px] font-black uppercase tracking-tighter">{t.adminActive}</span>
-               </div>
-             )}
-
              <div className="relative flex-grow md:flex-grow-0 group">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-500 transition-colors" size={14}/>
                 <input 
@@ -194,14 +228,14 @@ const App: React.FC = () => {
              <div className="flex items-center space-x-1 rtl:space-x-reverse">
                 <button 
                   onClick={() => setHighContrast(!highContrast)} 
-                  title="Toggle High Contrast"
+                  title="Contrast"
                   className={`p-2 rounded-lg transition-colors ${highContrast ? 'text-cyan-500 bg-cyan-500/10' : 'text-slate-400 hover:text-cyan-500'}`}
                 >
                   <Type size={18}/>
                 </button>
                 <button 
                   onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} 
-                  title="Toggle Theme"
+                  title="Thema"
                   className="p-2 text-slate-400 hover:text-cyan-500 transition-colors"
                 >
                   {theme === 'dark' ? <Sun size={18}/> : <Moon size={18}/>}
@@ -217,6 +251,18 @@ const App: React.FC = () => {
                       ))}
                    </div>
                 </div>
+
+                <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-1"></div>
+
+                {isAdmin ? (
+                  <button onClick={() => setIsAdmin(false)} title="Uitloggen" className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all">
+                    <LogOut size={18} />
+                  </button>
+                ) : (
+                  <button onClick={() => setIsLoginOpen(true)} title="Admin Login" className="p-2 text-slate-400 hover:text-cyan-500 transition-colors">
+                    <Shield size={18} />
+                  </button>
+                )}
              </div>
           </div>
         </div>
@@ -224,26 +270,18 @@ const App: React.FC = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 md:py-12 flex-grow mb-24">
-         {activeTab === 'dashboard' ? (
-           <Dashboard ideas={ideas} content={t} onExport={() => {}} />
-         ) : (
+         {activeTab === 'dashboard' && (
+           <Dashboard ideas={ideas} content={t} onExport={handleExport} />
+         )}
+
+         {activeTab === 'ideas' && (
            <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 animate-slide-up">
              <div className="w-full lg:w-3/5 space-y-6">
                 <div className="flex items-center space-x-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
                    <Filter size={12} />
                    <span>Sorteer:</span>
-                   <button 
-                    onClick={() => setSortBy('newest')} 
-                    className={`px-3 py-1 rounded-full transition-all ${sortBy === 'newest' ? 'bg-cyan-500 text-white shadow-md' : 'hover:text-cyan-500'}`}
-                   >
-                     Nieuwste
-                   </button>
-                   <button 
-                    onClick={() => setSortBy('likes')} 
-                    className={`px-3 py-1 rounded-full transition-all ${sortBy === 'likes' ? 'bg-cyan-500 text-white shadow-md' : 'hover:text-cyan-500'}`}
-                   >
-                     Meest Geliefd
-                   </button>
+                   <button onClick={() => setSortBy('newest')} className={`px-3 py-1 rounded-full transition-all ${sortBy === 'newest' ? 'bg-cyan-500 text-white shadow-md' : 'hover:text-cyan-500'}`}>Nieuwste</button>
+                   <button onClick={() => setSortBy('likes')} className={`px-3 py-1 rounded-full transition-all ${sortBy === 'likes' ? 'bg-cyan-500 text-white shadow-md' : 'hover:text-cyan-500'}`}>Meest Geliefd</button>
                 </div>
 
                 <div className="grid grid-cols-1 gap-5">
@@ -274,14 +312,20 @@ const App: React.FC = () => {
                     </div>
                     {selectedIdea ? (
                       <div className="space-y-6 animate-fade-in relative z-10">
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-cyan-500">{selectedIdea.category}</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-cyan-500">{t.categories[selectedIdea.category]}</span>
                         <h2 className="text-3xl md:text-4xl font-black dark:text-white leading-[1.1] tracking-tight">{selectedIdea.title}</h2>
                         <div className="bg-slate-50 dark:bg-slate-950/50 p-6 rounded-3xl border dark:border-slate-800">
                            <p className="text-slate-600 dark:text-slate-300 text-base md:text-lg leading-relaxed font-medium">{selectedIdea.description}</p>
                         </div>
+                        {selectedIdea.adminResponse && (
+                          <div className="p-6 bg-rose-500/10 border border-rose-500/30 rounded-3xl">
+                             <p className="text-[9px] font-black uppercase text-rose-500 tracking-widest mb-2 flex items-center gap-2"><Shield size={12}/> DigiHart Team</p>
+                             <p className="text-sm dark:text-rose-100 italic leading-relaxed">"{selectedIdea.adminResponse}"</p>
+                          </div>
+                        )}
                         <div className="flex items-center justify-between pt-6 border-t dark:border-slate-800">
                            <div className="flex items-center space-x-3">
-                              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center text-white font-black shadow-lg">
+                              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center text-white font-black shadow-lg uppercase">
                                 {selectedIdea.author.charAt(0)}
                               </div>
                               <div>
@@ -289,7 +333,6 @@ const App: React.FC = () => {
                                 <p className="text-[10px] text-slate-500 font-bold uppercase">{new Date(selectedIdea.createdAt).toLocaleDateString()}</p>
                               </div>
                            </div>
-                           <button className="p-4 bg-cyan-600 text-white rounded-2xl shadow-xl shadow-cyan-600/20 hover:scale-105 transition-transform"><ChevronRight /></button>
                         </div>
                       </div>
                     ) : (
@@ -304,35 +347,78 @@ const App: React.FC = () => {
              </div>
            </div>
          )}
-      </main>
 
-      {/* Footer / Admin Button */}
-      <footer className="w-full py-10 text-center opacity-40 hover:opacity-100 transition-opacity">
-        {isAdmin ? (
-          <button onClick={() => setIsAdmin(false)} className="flex items-center space-x-2 mx-auto text-[10px] font-black uppercase tracking-widest text-rose-500 hover:underline">
-            <LogOut size={12} />
-            <span>Beheermodus Uitloggen</span>
-          </button>
-        ) : (
-          <button onClick={() => setIsLoginOpen(true)} className="flex items-center space-x-2 mx-auto text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-cyan-500">
-            <Shield size={12} />
-            <span>{t.adminLogin}</span>
-          </button>
-        )}
-      </footer>
+         {activeTab === 'admin' && isAdmin && (
+            <div className="space-y-8 animate-fade-in">
+              <div className="flex justify-between items-center border-b dark:border-slate-800 pb-6">
+                <div>
+                  <h2 className="text-3xl md:text-5xl font-black dark:text-white tracking-tighter uppercase leading-none text-rose-500">Beheer Overzicht</h2>
+                  <p className="text-slate-500 text-[10px] md:text-sm font-bold tracking-widest uppercase mt-2 opacity-60">Systeembeheer & Moderatie</p>
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border dark:border-slate-800 overflow-x-auto shadow-2xl">
+                <table className="w-full text-left border-collapse min-w-[800px]">
+                  <thead>
+                    <tr className="bg-slate-50 dark:bg-slate-800/50 border-b dark:border-slate-800">
+                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Idee</th>
+                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Auteur</th>
+                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Moderatie Reactie</th>
+                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Acties</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y dark:divide-slate-800">
+                    {ideas.map(idea => (
+                      <tr key={idea.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
+                        <td className="px-8 py-6 align-top">
+                          <p className="text-sm font-black dark:text-white truncate max-w-xs">{idea.title}</p>
+                          <p className="text-[10px] font-bold text-cyan-500 uppercase tracking-widest">{t.categories[idea.category]}</p>
+                        </td>
+                        <td className="px-8 py-6 text-xs font-bold dark:text-slate-300 align-top">{idea.author}</td>
+                        <td className="px-8 py-6 align-top">
+                          <div className="flex items-center space-x-2">
+                             <input 
+                              type="text" 
+                              placeholder={t.replyPlaceholder} 
+                              value={adminReplyText[idea.id] ?? (idea.adminResponse || '')}
+                              onChange={(e) => setAdminReplyText(prev => ({ ...prev, [idea.id]: e.target.value }))}
+                              className="bg-slate-100 dark:bg-slate-800 p-3 rounded-xl text-xs font-bold outline-none border-2 border-transparent focus:border-rose-500 w-64 transition-all dark:text-white"
+                             />
+                             <button 
+                              onClick={() => handleSaveAdminReply(idea.id)} 
+                              className="p-3 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-colors shadow-lg shadow-rose-500/20"
+                             >
+                                <Send size={14} />
+                             </button>
+                          </div>
+                        </td>
+                        <td className="px-8 py-6 text-right align-top">
+                          <button 
+                            onClick={() => handleDeleteIdea(idea.id)} 
+                            className="p-3 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+         )}
+      </main>
 
       {/* Floating Action Buttons */}
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center space-x-3 z-50">
         <button 
           onClick={() => setIsAIOpen(true)} 
-          aria-label="AI Brainstorm"
           className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 md:px-8 py-4 md:py-5 rounded-[2rem] shadow-2xl shadow-pink-600/30 hover:scale-105 transition-all active:scale-95 font-black uppercase tracking-widest text-[9px] md:text-[10px] flex items-center gap-2 md:gap-3"
         >
           <Sparkles size={18}/> <span className="hidden sm:inline">{t.generateAI}</span><span className="sm:hidden">AI</span>
         </button>
         <button 
           onClick={() => setIsFormOpen(true)} 
-          aria-label="Voeg idee toe"
           className="bg-cyan-600 text-white p-5 md:p-6 rounded-[1.8rem] md:rounded-[2rem] shadow-2xl shadow-cyan-600/30 hover:scale-105 transition-all active:scale-95 group"
         >
           <Plus size={28} className="group-hover:rotate-90 transition-transform duration-500"/>
@@ -359,7 +445,7 @@ const App: React.FC = () => {
                       autoFocus
                     />
                     <button type="submit" className="w-full bg-cyan-600 text-white py-4 rounded-xl font-black uppercase tracking-[0.2em] text-[10px]">Verifiëren</button>
-                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Demo wachtwoord: admin123</p>
+                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Wachtwoord: admin123</p>
                  </form>
               </div>
            </div>
@@ -374,30 +460,12 @@ const App: React.FC = () => {
               <button onClick={() => setIsAIOpen(false)} className="absolute top-6 right-6 text-slate-400 hover:text-white p-2 transition-colors"><X size={28}/></button>
               
               <h2 className="text-2xl md:text-4xl font-black mb-1 flex items-center gap-3 dark:text-white tracking-tighter uppercase"><Sparkles className="text-pink-500 animate-pulse"/> {t.generateAI}</h2>
-              <p className="text-slate-500 text-[9px] font-bold uppercase tracking-widest mb-8 opacity-60">Synthesize New Innovation Concepts</p>
-              
-              {isApiKeyMissing && (
-                <div className="bg-red-500/10 border border-red-500/30 p-6 rounded-3xl mb-8 space-y-4">
-                  <div className="flex items-center gap-3 text-red-500">
-                    <AlertCircle size={24} />
-                    <h4 className="font-black text-xs uppercase tracking-widest">API_KEY Ontbreekt</h4>
-                  </div>
-                  <div className="text-[11px] text-slate-400 font-medium leading-relaxed space-y-2">
-                    <p>De AI-functies werken pas als je een sleutel instelt in Vercel. <strong>Geen paniek:</strong> de rest van de site werkt gewoon.</p>
-                  </div>
-                </div>
-              )}
-
               <div className="space-y-6">
                  <div className="space-y-1.5">
                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Inspiratie Trefwoord</label>
                     <input type="text" value={aiTopic} onChange={(e)=>setAiTopic(e.target.value)} placeholder="Bijv: Groene mobiliteit, VR zorg..." className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-xl outline-none border-2 border-transparent focus:border-pink-500 font-bold dark:text-white transition-all" disabled={isApiKeyMissing && !aiTopic}/>
                  </div>
-                 <button 
-                  onClick={handleAIBrainstorm} 
-                  disabled={aiLoading || !aiTopic || isApiKeyMissing} 
-                  className="w-full bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 text-white py-5 rounded-[1.8rem] font-black shadow-2xl shadow-pink-600/30 hover:scale-[1.02] transition-all active:scale-95 disabled:opacity-20 uppercase tracking-[0.2em] text-[10px]"
-                 >
+                 <button onClick={handleAIBrainstorm} disabled={aiLoading || !aiTopic || isApiKeyMissing} className="w-full bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 text-white py-5 rounded-[1.8rem] font-black shadow-2xl shadow-pink-600/30 hover:scale-[1.02] transition-all active:scale-95 disabled:opacity-20 uppercase tracking-[0.2em] text-[10px]">
                    {aiLoading ? "Synthesizing..." : "Activeer Brainstorm"}
                  </button>
                  {aiResult && (
@@ -431,12 +499,9 @@ const App: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Categorie</label>
-                    <div className="relative">
-                      <select value={newCategory} onChange={(e)=>setNewCategory(e.target.value as any)} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-xl outline-none border-2 border-transparent focus:border-cyan-500 font-bold dark:text-white appearance-none cursor-pointer">
-                        {Object.values(IdeaCategory).map(c => <option key={c} value={c}>{c}</option>)}
-                      </select>
-                      <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 rotate-90 text-slate-400 pointer-events-none" size={16} />
-                    </div>
+                    <select value={newCategory} onChange={(e)=>setNewCategory(e.target.value as any)} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-xl outline-none border-2 border-transparent focus:border-cyan-500 font-bold dark:text-white appearance-none cursor-pointer">
+                      {Object.values(IdeaCategory).map(c => <option key={c} value={c}>{t.categories[c]}</option>)}
+                    </select>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Auteur</label>

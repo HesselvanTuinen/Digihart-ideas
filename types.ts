@@ -18,6 +18,7 @@ export interface Idea {
   dislikes: number;
   createdAt: Date;
   author: string;
+  adminResponse?: string;
 }
 
 export type SupportedLanguage = 'en' | 'es' | 'nl' | 'ar' | 'uk' | 'zh' | 'de';
@@ -39,13 +40,20 @@ export interface LanguageContent {
   adminLogin: string;
   adminActive: string;
   deleteConfirm: string;
+  adminReply: string;
+  replyPlaceholder: string;
+  saveReply: string;
+  topIdeasChart: string;
+  timelineChart: string;
+  categoryChart: string;
+  categories: Record<IdeaCategory, string>;
 }
 
 export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
   nl: {
     dashboard: "Dashboard",
     addIdea: "Idee Toevoegen",
-    export: "Exporteren",
+    export: "Export naar Excel (CSV)",
     search: "Zoeken...",
     generateAI: "AI Brainstorm",
     submit: "Idee Opslaan",
@@ -58,12 +66,27 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     noIdeas: "Geen ideeën gevonden.",
     adminLogin: "Admin Inlog",
     adminActive: "Beheermodus Actief",
-    deleteConfirm: "Weet je zeker dat je dit idee wilt verwijderen?"
+    deleteConfirm: "Weet je zeker dat je dit idee wilt verwijderen?",
+    adminReply: "Reactie van Beheer",
+    replyPlaceholder: "Schrijf een reactie als admin...",
+    saveReply: "Reactie Opslaan",
+    topIdeasChart: "Top 5 Populairste Ideeën",
+    timelineChart: "Ideeën over de Tijd",
+    categoryChart: "Verdeling per Categorie",
+    categories: {
+      [IdeaCategory.TECHNOLOGY]: "Technologie",
+      [IdeaCategory.COMMUNITY]: "Gemeenschap",
+      [IdeaCategory.SUSTAINABILITY]: "Duurzaamheid",
+      [IdeaCategory.EDUCATION]: "Educatie",
+      [IdeaCategory.HEALTH]: "Gezondheid",
+      [IdeaCategory.ART]: "Kunst",
+      [IdeaCategory.INCLUSION]: "Inclusie"
+    }
   },
   en: {
     dashboard: "Dashboard",
     addIdea: "Add Idea",
-    export: "Export",
+    export: "Export to Excel (CSV)",
     search: "Search...",
     generateAI: "AI Brainstorm",
     submit: "Save Idea",
@@ -76,12 +99,27 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     noIdeas: "No ideas found.",
     adminLogin: "Admin Login",
     adminActive: "Admin Mode Active",
-    deleteConfirm: "Are you sure you want to delete this idea?"
+    deleteConfirm: "Are you sure you want to delete this idea?",
+    adminReply: "Admin Response",
+    replyPlaceholder: "Write a response as admin...",
+    saveReply: "Save Response",
+    topIdeasChart: "Top 5 Popular Ideas",
+    timelineChart: "Ideas Over Time",
+    categoryChart: "Category Distribution",
+    categories: {
+      [IdeaCategory.TECHNOLOGY]: "Technology",
+      [IdeaCategory.COMMUNITY]: "Community",
+      [IdeaCategory.SUSTAINABILITY]: "Sustainability",
+      [IdeaCategory.EDUCATION]: "Education",
+      [IdeaCategory.HEALTH]: "Health",
+      [IdeaCategory.ART]: "Art",
+      [IdeaCategory.INCLUSION]: "Inclusion"
+    }
   },
   es: {
     dashboard: "Tablero",
     addIdea: "Añadir Idea",
-    export: "Exportar",
+    export: "Exportar a Excel (CSV)",
     search: "Buscar...",
     generateAI: "Lluvia de ideas IA",
     submit: "Guardar Idea",
@@ -94,12 +132,27 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     noIdeas: "No se encontraron ideas.",
     adminLogin: "Admin",
     adminActive: "Modo Admin Activo",
-    deleteConfirm: "¿Estás seguro de que quieres eliminar esta idea?"
+    deleteConfirm: "¿Estás seguro de que quieres eliminar esta idea?",
+    adminReply: "Respuesta de Admin",
+    replyPlaceholder: "Escribe una respuesta...",
+    saveReply: "Guardar Respuesta",
+    topIdeasChart: "Top 5 Ideas Populares",
+    timelineChart: "Ideas en el Tiempo",
+    categoryChart: "Distribución por Categoría",
+    categories: {
+      [IdeaCategory.TECHNOLOGY]: "Tecnología",
+      [IdeaCategory.COMMUNITY]: "Comunidad",
+      [IdeaCategory.SUSTAINABILITY]: "Sostenibilidad",
+      [IdeaCategory.EDUCATION]: "Educación",
+      [IdeaCategory.HEALTH]: "Salud",
+      [IdeaCategory.ART]: "Arte",
+      [IdeaCategory.INCLUSION]: "Inclusión"
+    }
   },
   ar: {
     dashboard: "لوحة القيادة",
     addIdea: "إضافة فكرة",
-    export: "تصدير",
+    export: "تصدير إلى إكسل",
     search: "بحث...",
     generateAI: "عصف ذهني بالذكاء الاصطناعي",
     submit: "حفظ الفكرة",
@@ -112,12 +165,27 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     noIdeas: "لم يتم العثور على أفكار.",
     adminLogin: "تسجيل دخول المسؤول",
     adminActive: "وضع المسؤول نشط",
-    deleteConfirm: "هل أنت متأكد أنك تريد حذف هذه الفكرة؟"
+    deleteConfirm: "هل أنت متأكد أنك تريد حذف هذه الفكرة؟",
+    adminReply: "رد المسؤول",
+    replyPlaceholder: "اكتب رداً كمسؤول...",
+    saveReply: "حفظ الرد",
+    topIdeasChart: "أفضل 5 أفكار",
+    timelineChart: "الأفكار مع مرور الوقت",
+    categoryChart: "توزيع الفئات",
+    categories: {
+      [IdeaCategory.TECHNOLOGY]: "تكنولوجيا",
+      [IdeaCategory.COMMUNITY]: "مجتمع",
+      [IdeaCategory.SUSTAINABILITY]: "استدامة",
+      [IdeaCategory.EDUCATION]: "تعليم",
+      [IdeaCategory.HEALTH]: "صحة",
+      [IdeaCategory.ART]: "فن",
+      [IdeaCategory.INCLUSION]: "شمولية"
+    }
   },
   uk: {
     dashboard: "Панель",
     addIdea: "Додати ідею",
-    export: "Експорт",
+    export: "Експорт в Excel",
     search: "Пошук...",
     generateAI: "AI Мозковий штурм",
     submit: "Зберегти ідею",
@@ -130,12 +198,27 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     noIdeas: "Ідей не знайдено.",
     adminLogin: "Вхід адміністратора",
     adminActive: "Режим адміна активний",
-    deleteConfirm: "Ви впевнені, що хочете видалити цю ідею?"
+    deleteConfirm: "Ви впевнені, що хочете видалити цю ідею?",
+    adminReply: "Відповідь адміна",
+    replyPlaceholder: "Напишіть відповідь...",
+    saveReply: "Зберегти",
+    topIdeasChart: "Топ 5 ідей",
+    timelineChart: "Ідеї в часі",
+    categoryChart: "Розподіл за категоріями",
+    categories: {
+      [IdeaCategory.TECHNOLOGY]: "Технології",
+      [IdeaCategory.COMMUNITY]: "Спільнота",
+      [IdeaCategory.SUSTAINABILITY]: "Сталий розвиток",
+      [IdeaCategory.EDUCATION]: "Освіта",
+      [IdeaCategory.HEALTH]: "Здоров'я",
+      [IdeaCategory.ART]: "Мистецтво",
+      [IdeaCategory.INCLUSION]: "Інклюзія"
+    }
   },
   zh: {
     dashboard: "仪表板",
     addIdea: "添加想法",
-    export: "导出",
+    export: "导出至 Excel",
     search: "搜索...",
     generateAI: "AI 头脑风暴",
     submit: "保存想法",
@@ -148,12 +231,27 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     noIdeas: "未找到想法。",
     adminLogin: "管理员登录",
     adminActive: "管理员模式已激活",
-    deleteConfirm: "您确定要删除这个想法吗？"
+    deleteConfirm: "您确定要删除这个想法吗？",
+    adminReply: "管理员回复",
+    replyPlaceholder: "作为管理员回复...",
+    saveReply: "保存回复",
+    topIdeasChart: "前 5 个想法",
+    timelineChart: "想法时间轴",
+    categoryChart: "类别分布",
+    categories: {
+      [IdeaCategory.TECHNOLOGY]: "技术",
+      [IdeaCategory.COMMUNITY]: "社区",
+      [IdeaCategory.SUSTAINABILITY]: "可持续性",
+      [IdeaCategory.EDUCATION]: "教育",
+      [IdeaCategory.HEALTH]: "健康",
+      [IdeaCategory.ART]: "艺术",
+      [IdeaCategory.INCLUSION]: "包容性"
+    }
   },
   de: {
     dashboard: "Dashboard",
     addIdea: "Idee hinzufügen",
-    export: "Exportieren",
+    export: "Als Excel exportieren",
     search: "Suchen...",
     generateAI: "KI Brainstorming",
     submit: "Idee speichern",
@@ -166,6 +264,21 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     noIdeas: "Keine Ideen gefunden.",
     adminLogin: "Admin Login",
     adminActive: "Admin-Modus Aktiv",
-    deleteConfirm: "Bist du sicher, dass du diese Idee löschen möchtest?"
+    deleteConfirm: "Bist du sicher, dass du diese Idee löschen möchtest?",
+    adminReply: "Admin-Antwort",
+    replyPlaceholder: "Schreibe eine Antwort...",
+    saveReply: "Antwort speichern",
+    topIdeasChart: "Top 5 Ideen",
+    timelineChart: "Ideen Zeitstrahl",
+    categoryChart: "Kategorie-Verteilung",
+    categories: {
+      [IdeaCategory.TECHNOLOGY]: "Technologie",
+      [IdeaCategory.COMMUNITY]: "Gemeinschaft",
+      [IdeaCategory.SUSTAINABILITY]: "Nachhaltigkeit",
+      [IdeaCategory.EDUCATION]: "Bildung",
+      [IdeaCategory.HEALTH]: "Gesundheit",
+      [IdeaCategory.ART]: "Kunst",
+      [IdeaCategory.INCLUSION]: "Inklusion"
+    }
   }
 };

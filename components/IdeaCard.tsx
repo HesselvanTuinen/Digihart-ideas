@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ThumbsUp, ThumbsDown, Clock, User, Tag, Trash2 } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, Clock, Tag, Trash2, ShieldCheck } from 'lucide-react';
 import { Idea } from '../types';
 
 interface IdeaCardProps {
@@ -73,13 +73,25 @@ const IdeaCard: React.FC<IdeaCardProps> = ({ idea, onLike, onDislike, onDelete, 
         </div>
       </div>
       
-      <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed line-clamp-2 mb-6 font-medium">
+      <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-6 font-medium">
         {idea.description}
       </p>
+
+      {idea.adminResponse && (
+        <div className="mb-6 p-4 rounded-xl bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 animate-fade-in">
+          <div className="flex items-center gap-2 mb-1">
+            <ShieldCheck size={14} className="text-rose-500" />
+            <span className="text-[9px] font-black uppercase tracking-widest text-rose-500">Reactie van DigiHart</span>
+          </div>
+          <p className="text-xs text-slate-600 dark:text-rose-200/70 font-bold italic leading-relaxed">
+            "{idea.adminResponse}"
+          </p>
+        </div>
+      )}
       
       <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 border-t dark:border-slate-800 pt-4">
           <div className="flex items-center space-x-2">
-              <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-cyan-500 to-purple-500 flex items-center justify-center text-white text-[8px]">
+              <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-cyan-500 to-purple-500 flex items-center justify-center text-white text-[8px] font-black uppercase">
                 {idea.author.substring(0, 2).toUpperCase()}
               </div>
               <span>{idea.author}</span>
