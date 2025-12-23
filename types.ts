@@ -36,6 +36,9 @@ export interface LanguageContent {
   topCategory: string;
   popularTitle: string;
   noIdeas: string;
+  adminLogin: string;
+  adminActive: string;
+  deleteConfirm: string;
 }
 
 export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
@@ -52,7 +55,10 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     totalIdeas: "Totaal Ideeën",
     topCategory: "Populairste Categorie",
     popularTitle: "Meest Geliefd",
-    noIdeas: "Geen ideeën gevonden."
+    noIdeas: "Geen ideeën gevonden.",
+    adminLogin: "Admin Inlog",
+    adminActive: "Beheermodus Actief",
+    deleteConfirm: "Weet je zeker dat je dit idee wilt verwijderen?"
   },
   en: {
     dashboard: "Dashboard",
@@ -67,7 +73,10 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     totalIdeas: "Total Ideas",
     topCategory: "Top Category",
     popularTitle: "Most Loved",
-    noIdeas: "No ideas found."
+    noIdeas: "No ideas found.",
+    adminLogin: "Admin Login",
+    adminActive: "Admin Mode Active",
+    deleteConfirm: "Are you sure you want to delete this idea?"
   },
   es: {
     dashboard: "Tablero",
@@ -82,7 +91,10 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     totalIdeas: "Ideas Totales",
     topCategory: "Categoría Principal",
     popularTitle: "Más Queridos",
-    noIdeas: "No se encontraron ideas."
+    noIdeas: "No se encontraron ideas.",
+    adminLogin: "Admin",
+    adminActive: "Modo Admin Activo",
+    deleteConfirm: "¿Estás seguro de que quieres eliminar esta idea?"
   },
   ar: {
     dashboard: "لوحة القيادة",
@@ -97,7 +109,10 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     totalIdeas: "إجمالي الأفكار",
     topCategory: "أعلى فئة",
     popularTitle: "الأكثر إعجاباً",
-    noIdeas: "لم يتم العثور على أفكار."
+    noIdeas: "لم يتم العثور على أفكار.",
+    adminLogin: "تسجيل دخول المسؤول",
+    adminActive: "وضع المسؤول نشط",
+    deleteConfirm: "هل أنت متأكد أنك تريد حذف هذه الفكرة؟"
   },
   uk: {
     dashboard: "Панель",
@@ -112,7 +127,10 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     totalIdeas: "Всього ідей",
     topCategory: "Топ категорія",
     popularTitle: "Найпопулярніші",
-    noIdeas: "Ідей не знайдено."
+    noIdeas: "Ідей не знайдено.",
+    adminLogin: "Вхід адміністратора",
+    adminActive: "Режим адміна активний",
+    deleteConfirm: "Ви впевнені, що хочете видалити цю ідею?"
   },
   zh: {
     dashboard: "仪表板",
@@ -127,7 +145,10 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     totalIdeas: "总想法数",
     topCategory: "热门类别",
     popularTitle: "最受喜爱",
-    noIdeas: "未找到想法。"
+    noIdeas: "未找到想法。",
+    adminLogin: "管理员登录",
+    adminActive: "管理员模式已激活",
+    deleteConfirm: "您确定要删除这个想法吗？"
   },
   de: {
     dashboard: "Dashboard",
@@ -142,6 +163,9 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     totalIdeas: "Gesamtideen",
     topCategory: "Top-Kategorie",
     popularTitle: "Meistgeliebt",
-    noIdeas: "Keine Ideen gefunden."
+    noIdeas: "Keine Ideen gefunden.",
+    adminLogin: "Admin Login",
+    adminActive: "Admin-Modus Aktiv",
+    deleteConfirm: "Bist du sicher, dass du diese Idee löschen möchtest?"
   }
 };

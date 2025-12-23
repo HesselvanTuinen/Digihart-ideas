@@ -1,17 +1,19 @@
 
 import React from 'react';
-import { ThumbsUp, ThumbsDown, Clock, User, Tag } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, Clock, User, Tag, Trash2 } from 'lucide-react';
 import { Idea } from '../types';
 
 interface IdeaCardProps {
   idea: Idea;
   onLike: (id: string) => void;
   onDislike: (id: string) => void;
+  onDelete?: (id: string) => void;
   onClick?: () => void;
   isSelected?: boolean;
+  isAdmin?: boolean;
 }
 
-const IdeaCard: React.FC<IdeaCardProps> = ({ idea, onLike, onDislike, onClick, isSelected }) => {
+const IdeaCard: React.FC<IdeaCardProps> = ({ idea, onLike, onDislike, onDelete, onClick, isSelected, isAdmin }) => {
   const categoryColors: Record<string, string> = {
     'Technology': 'border-cyan-500 text-cyan-600 dark:text-cyan-400 shadow-cyan-500/5',
     'Community': 'border-emerald-500 text-emerald-600 dark:text-emerald-400 shadow-emerald-500/5',
@@ -31,6 +33,16 @@ const IdeaCard: React.FC<IdeaCardProps> = ({ idea, onLike, onDislike, onClick, i
         ${isSelected ? 'ring-2 ring-cyan-500 dark:ring-cyan-400 bg-cyan-50/10 dark:bg-cyan-900/10' : ''}
       `}
     >
+      {isAdmin && (
+        <button 
+          onClick={(e) => { e.stopPropagation(); onDelete && onDelete(idea.id); }}
+          className="absolute top-4 right-16 p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all z-10"
+          title="Verwijder idee"
+        >
+          <Trash2 size={18} />
+        </button>
+      )}
+
       <div className="flex justify-between items-start mb-4">
         <div className="flex-grow">
            <div className="flex items-center space-x-2">

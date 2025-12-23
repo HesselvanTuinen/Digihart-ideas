@@ -5,7 +5,7 @@ import Dashboard from './components/Dashboard';
 import IdeaCard from './components/IdeaCard';
 import { Idea, IdeaCategory, SupportedLanguage, DICTIONARY } from './types';
 import { generateBrainstormIdeas } from './services/geminiService';
-import { Plus, Search, Sparkles, X, Sun, Moon, Type, LayoutGrid, BarChart3, Languages, ChevronRight, Filter, AlertCircle } from 'lucide-react';
+import { Plus, Search, Sparkles, X, Sun, Moon, Type, LayoutGrid, BarChart3, Languages, ChevronRight, Filter, AlertCircle, Shield, Key, LogOut } from 'lucide-react';
 
 const App: React.FC = () => {
   // --- States ---
@@ -17,6 +17,11 @@ const App: React.FC = () => {
   const [highContrast, setHighContrast] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [sortBy, setSortBy] = useState<'newest' | 'likes'>('newest');
+
+  // Admin States
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [loginPassword, setLoginPassword] = useState('');
 
   // Modal States
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -38,12 +43,10 @@ const App: React.FC = () => {
   // EXTRA VEILIGE CHECK VOOR API KEY (Voorkomt zwart scherm)
   const isApiKeyMissing = useMemo(() => {
     try {
-      // Gebruik indirecte check om ReferenceError te voorkomen
       const env = (window as any).process?.env || (typeof process !== 'undefined' ? process.env : null);
       const key = env?.API_KEY;
       return !key || key === 'undefined' || key.length < 5;
     } catch (e) {
-      console.warn("Kon process.env niet veilig uitlezen, app gaat door zonder AI.");
       return true;
     }
   }, []);
@@ -80,6 +83,25 @@ const App: React.FC = () => {
 
   const handleDislike = (id: string) => {
     setIdeas(prev => prev.map(i => i.id === id ? { ...i, dislikes: i.dislikes + 1 } : i));
+  };
+
+  const handleDeleteIdea = (id: string) => {
+    if (window.confirm(t.deleteConfirm)) {
+      setIdeas(prev => prev.filter(i => i.id !== id));
+      if (selectedIdeaId === id) setSelectedIdeaId(null);
+    }
+  };
+
+  const handleAdminLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    // In een echte app zou dit een server check zijn. Voor nu simpel:
+    if (loginPassword === 'admin123') {
+      setIsAdmin(true);
+      setIsLoginOpen(false);
+      setLoginPassword('');
+    } else {
+      alert("Fout wachtwoord!");
+    }
   };
 
   const handleAddIdea = (e: React.FormEvent) => {
@@ -151,6 +173,13 @@ const App: React.FC = () => {
           </div>
 
           <div className="flex items-center justify-between md:justify-end space-x-3 w-full md:w-auto rtl:space-x-reverse">
+             {isAdmin && (
+               <div className="hidden md:flex items-center space-x-2 px-3 py-1 bg-rose-500/10 border border-rose-500/50 rounded-full text-rose-500 animate-pulse">
+                  <Shield size={12} />
+                  <span className="text-[9px] font-black uppercase tracking-tighter">{t.adminActive}</span>
+               </div>
+             )}
+
              <div className="relative flex-grow md:flex-grow-0 group">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-500 transition-colors" size={14}/>
                 <input 
@@ -224,8 +253,10 @@ const App: React.FC = () => {
                       idea={idea} 
                       onLike={handleLike} 
                       onDislike={handleDislike} 
+                      onDelete={isAdmin ? handleDeleteIdea : undefined}
                       onClick={() => setSelectedIdeaId(idea.id)} 
                       isSelected={idea.id === selectedIdeaId}
+                      isAdmin={isAdmin}
                     />
                   )) : (
                     <div className="text-center py-20 bg-slate-100 dark:bg-slate-900 rounded-[2rem] border-2 border-dashed border-slate-200 dark:border-slate-800">
@@ -275,6 +306,21 @@ const App: React.FC = () => {
          )}
       </main>
 
+      {/* Footer / Admin Button */}
+      <footer className="w-full py-10 text-center opacity-40 hover:opacity-100 transition-opacity">
+        {isAdmin ? (
+          <button onClick={() => setIsAdmin(false)} className="flex items-center space-x-2 mx-auto text-[10px] font-black uppercase tracking-widest text-rose-500 hover:underline">
+            <LogOut size={12} />
+            <span>Beheermodus Uitloggen</span>
+          </button>
+        ) : (
+          <button onClick={() => setIsLoginOpen(true)} className="flex items-center space-x-2 mx-auto text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-cyan-500">
+            <Shield size={12} />
+            <span>{t.adminLogin}</span>
+          </button>
+        )}
+      </footer>
+
       {/* Floating Action Buttons */}
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center space-x-3 z-50">
         <button 
@@ -292,6 +338,33 @@ const App: React.FC = () => {
           <Plus size={28} className="group-hover:rotate-90 transition-transform duration-500"/>
         </button>
       </div>
+
+      {/* Admin Login Modal */}
+      {isLoginOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-md animate-fade-in">
+           <div className="bg-white dark:bg-slate-900 border-2 border-cyan-500/20 rounded-[2rem] w-full max-w-sm p-8 shadow-2xl relative">
+              <button onClick={() => setIsLoginOpen(false)} className="absolute top-4 right-4 text-slate-400"><X size={20}/></button>
+              <div className="flex flex-col items-center text-center space-y-4">
+                 <div className="p-4 bg-cyan-500/10 rounded-full text-cyan-500">
+                    <Key size={32} />
+                 </div>
+                 <h2 className="text-xl font-black uppercase tracking-widest dark:text-white">{t.adminLogin}</h2>
+                 <form onSubmit={handleAdminLogin} className="w-full space-y-4">
+                    <input 
+                      type="password" 
+                      placeholder="Wachtwoord" 
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      className="w-full bg-slate-100 dark:bg-slate-800 p-4 rounded-xl outline-none border-2 border-transparent focus:border-cyan-500 font-bold dark:text-white transition-all text-center"
+                      autoFocus
+                    />
+                    <button type="submit" className="w-full bg-cyan-600 text-white py-4 rounded-xl font-black uppercase tracking-[0.2em] text-[10px]">Verifiëren</button>
+                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Demo wachtwoord: admin123</p>
+                 </form>
+              </div>
+           </div>
+        </div>
+      )}
 
       {/* AI Modal */}
       {isAIOpen && (
@@ -311,11 +384,6 @@ const App: React.FC = () => {
                   </div>
                   <div className="text-[11px] text-slate-400 font-medium leading-relaxed space-y-2">
                     <p>De AI-functies werken pas als je een sleutel instelt in Vercel. <strong>Geen paniek:</strong> de rest van de site werkt gewoon.</p>
-                    <ul className="list-disc list-inside space-y-1 ml-2">
-                      <li>Naam in Vercel: <code className="bg-slate-800 text-pink-400 px-1.5 py-0.5 rounded">API_KEY</code></li>
-                      <li>Geen streepjes (-), gebruik een underscore (_).</li>
-                      <li>Klik op <strong>Redeploy</strong> na het opslaan van de variabele.</li>
-                    </ul>
                   </div>
                 </div>
               )}
