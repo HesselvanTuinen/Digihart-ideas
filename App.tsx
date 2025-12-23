@@ -5,10 +5,11 @@ import Dashboard from './components/Dashboard';
 import IdeaCard from './components/IdeaCard';
 import { Idea, IdeaCategory, SupportedLanguage, DICTIONARY } from './types';
 import { generateBrainstormIdeas, suggestAdminReply } from './services/geminiService';
+import { GoogleGenAI } from "@google/genai";
 import { 
   Plus, Search, Sparkles, X, Sun, Moon, Type, LayoutGrid, 
   BarChart3, Languages, ChevronRight, Filter, AlertCircle, 
-  Shield, Key, LogOut, Trash2, Send, Wand2, Loader2
+  Shield, Key, LogOut, Trash2, Send, Wand2, Loader2, Check
 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -28,6 +29,7 @@ const App: React.FC = () => {
   const [loginPassword, setLoginPassword] = useState('');
   const [adminReplyText, setAdminReplyText] = useState<Record<string, string>>({});
   const [suggestingReplyId, setSuggestingReplyId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Modal States
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -38,6 +40,7 @@ const App: React.FC = () => {
   const [newDesc, setNewDesc] = useState('');
   const [newCategory, setNewCategory] = useState<IdeaCategory>(IdeaCategory.TECHNOLOGY);
   const [newAuthor, setNewAuthor] = useState('');
+  const [refiningIdea, setRefiningIdea] = useState(false);
 
   // AI States
   const [aiTopic, setAiTopic] = useState('');
@@ -90,10 +93,9 @@ const App: React.FC = () => {
   };
 
   const handleDeleteIdea = (id: string) => {
-    if (window.confirm(t.deleteConfirm)) {
-      setIdeas(prev => prev.filter(i => i.id !== id));
-      if (selectedIdeaId === id) setSelectedIdeaId(null);
-    }
+    setIdeas(prev => prev.filter(i => i.id !== id));
+    if (selectedIdeaId === id) setSelectedIdeaId(null);
+    setConfirmDeleteId(null);
   };
 
   const handleSaveAdminReply = (id: string) => {
@@ -117,6 +119,36 @@ const App: React.FC = () => {
       }
     } finally {
       setSuggestingReplyId(null);
+    }
+  };
+
+  const handleRefineIdea = async () => {
+    if (!newTitle || !newDesc || isApiKeyMissing) return;
+    setRefiningIdea(true);
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const prompt = `Refine this idea for an innovation platform. 
+      Improve the title and description to be more compelling and professional.
+      Title: ${newTitle}
+      Description: ${newDesc}
+      Category: ${newCategory}
+      Provide the response in JSON format with keys "title" and "description".`;
+      
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json'
+        }
+      });
+      
+      const result = JSON.parse(response.text || '{}');
+      if (result.title) setNewTitle(result.title);
+      if (result.description) setNewDesc(result.description);
+    } catch (e) {
+      console.error("Refine error", e);
+    } finally {
+      setRefiningIdea(false);
     }
   };
 
@@ -423,13 +455,20 @@ const App: React.FC = () => {
                         </td>
                         <td className="px-8 py-6 text-right align-top">
                           <div className="flex flex-col items-end space-y-2">
-                            <button 
-                                onClick={() => handleDeleteIdea(idea.id)} 
-                                className="flex items-center space-x-2 px-4 py-2 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl transition-all font-black text-[10px] uppercase tracking-widest border border-rose-500/30"
-                            >
-                                <Trash2 size={14} />
-                                <span>Verwijder</span>
-                            </button>
+                            {confirmDeleteId === idea.id ? (
+                                <div className="flex items-center gap-2 animate-fade-in bg-rose-600 p-2 rounded-xl">
+                                    <button onClick={() => handleDeleteIdea(idea.id)} className="p-2 bg-white/20 rounded-lg text-white"><Check size={14} /></button>
+                                    <button onClick={() => setConfirmDeleteId(null)} className="p-2 bg-black/20 rounded-lg text-white"><X size={14} /></button>
+                                </div>
+                            ) : (
+                                <button 
+                                    onClick={() => setConfirmDeleteId(idea.id)} 
+                                    className="flex items-center space-x-2 px-4 py-2 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl transition-all font-black text-[10px] uppercase tracking-widest border border-rose-500/30"
+                                >
+                                    <Trash2 size={14} />
+                                    <span>Verwijder</span>
+                                </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -525,7 +564,17 @@ const App: React.FC = () => {
              </div>
              <form onSubmit={handleAddIdea} className="space-y-5">
                 <div className="space-y-1.5">
-                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Titel</label>
+                   <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Titel</label>
+                      <button 
+                        type="button"
+                        onClick={handleRefineIdea}
+                        disabled={!newTitle || refiningIdea || isApiKeyMissing}
+                        className="flex items-center gap-1.5 text-[8px] font-black text-purple-500 uppercase hover:text-purple-400 disabled:opacity-30 transition-all"
+                      >
+                         {refiningIdea ? <Loader2 size={10} className="animate-spin"/> : <Sparkles size={10}/>} Verbeter Titel/Omschrijving (AI)
+                      </button>
+                   </div>
                    <input type="text" placeholder={t.titlePlaceholder} value={newTitle} onChange={(e)=>setNewTitle(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-xl outline-none border-2 border-transparent focus:border-cyan-500 font-bold dark:text-white transition-all" required/>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

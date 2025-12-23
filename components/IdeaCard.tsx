@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { ThumbsUp, ThumbsDown, Clock, Tag, Trash2, ShieldCheck } from 'lucide-react';
+import React, { useState } from 'react';
+import { ThumbsUp, ThumbsDown, Clock, Tag, Trash2, ShieldCheck, Check, X as XIcon } from 'lucide-react';
 import { Idea } from '../types';
 
 interface IdeaCardProps {
@@ -14,6 +14,8 @@ interface IdeaCardProps {
 }
 
 const IdeaCard: React.FC<IdeaCardProps> = ({ idea, onLike, onDislike, onDelete, onClick, isSelected, isAdmin }) => {
+  const [isConfirming, setIsConfirming] = useState(false);
+
   const categoryColors: Record<string, string> = {
     'Technology': 'border-cyan-500 text-cyan-600 dark:text-cyan-400 shadow-cyan-500/5',
     'Community': 'border-emerald-500 text-emerald-600 dark:text-emerald-400 shadow-emerald-500/5',
@@ -26,6 +28,22 @@ const IdeaCard: React.FC<IdeaCardProps> = ({ idea, onLike, onDislike, onDelete, 
 
   const colorClass = categoryColors[idea.category] || 'border-slate-500 text-slate-600 shadow-slate-500/5';
 
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsConfirming(true);
+  };
+
+  const confirmDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDelete && onDelete(idea.id);
+    setIsConfirming(false);
+  };
+
+  const cancelDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsConfirming(false);
+  };
+
   return (
     <div 
       onClick={onClick}
@@ -34,13 +52,35 @@ const IdeaCard: React.FC<IdeaCardProps> = ({ idea, onLike, onDislike, onDelete, 
       `}
     >
       {isAdmin && (
-        <button 
-          onClick={(e) => { e.stopPropagation(); onDelete && onDelete(idea.id); }}
-          className="absolute top-4 right-16 p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all z-10"
-          title="Verwijder idee"
-        >
-          <Trash2 size={18} />
-        </button>
+        <div className="absolute top-4 right-16 z-20">
+          {!isConfirming ? (
+            <button 
+              onClick={handleDeleteClick}
+              className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all"
+              title="Verwijder idee"
+            >
+              <Trash2 size={18} />
+            </button>
+          ) : (
+            <div className="flex items-center gap-2 animate-slide-up bg-rose-600 p-1.5 rounded-xl shadow-2xl shadow-rose-600/40">
+              <span className="text-[8px] font-black text-white uppercase px-2">Zeker?</span>
+              <button 
+                onClick={confirmDelete}
+                className="p-1.5 bg-white/20 hover:bg-white/40 text-white rounded-lg transition-colors"
+                title="Ja, verwijder"
+              >
+                <Check size={14} />
+              </button>
+              <button 
+                onClick={cancelDelete}
+                className="p-1.5 bg-black/20 hover:bg-black/40 text-white rounded-lg transition-colors"
+                title="Nee, behoud"
+              >
+                <XIcon size={14} />
+              </button>
+            </div>
+          )}
+        </div>
       )}
 
       <div className="flex justify-between items-start mb-4">
