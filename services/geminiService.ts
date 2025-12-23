@@ -1,6 +1,6 @@
 
 import { GoogleGenAI } from "@google/genai";
-import { IdeaCategory } from "../types";
+import { IdeaCategory, Idea } from "../types";
 
 export const generateBrainstormIdeas = async (
   topic: string,
@@ -8,14 +8,9 @@ export const generateBrainstormIdeas = async (
   language: string = 'Dutch'
 ): Promise<string> => {
   try {
-    // Check if API key exists in a safe way
     const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : undefined;
-    
-    if (!apiKey) {
-      return "Fout: Geen API-sleutel gevonden in de configuratie.";
-    }
+    if (!apiKey) return "Fout: Geen API-sleutel gevonden.";
 
-    // Initialize inside the call as per best practices
     const ai = new GoogleGenAI({ apiKey });
     
     const prompt = `Je bent een innovatie consultant voor DigiHart.nl. 
@@ -34,6 +29,39 @@ export const generateBrainstormIdeas = async (
     return response.text || "Geen resultaat.";
   } catch (error) {
     console.error("Gemini API Error:", error);
-    return "Fout bij verbinden met AI. Controleer je API-sleutel instellingen in Vercel.";
+    return "Fout bij verbinden met AI.";
+  }
+};
+
+export const suggestAdminReply = async (
+  idea: Idea,
+  language: string = 'Dutch'
+): Promise<string> => {
+  try {
+    const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : undefined;
+    if (!apiKey) return "";
+
+    const ai = new GoogleGenAI({ apiKey });
+    
+    const prompt = `Als beheerder van DigiHart.nl, schrijf een korte, bemoedigende en professionele reactie op dit idee:
+    Titel: ${idea.title}
+    Omschrijving: ${idea.description}
+    Categorie: ${idea.category}
+    
+    De reactie moet in het ${language} zijn en maximaal 2 zinnen lang.`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-lite-latest',
+      contents: prompt,
+      config: {
+        systemInstruction: "Je bent een vriendelijke en constructieve moderator voor DigiHart.nl.",
+        temperature: 0.7,
+      }
+    });
+
+    return response.text?.trim() || "";
+  } catch (error) {
+    console.error("Gemini Suggest Reply Error:", error);
+    return "";
   }
 };

@@ -4,11 +4,11 @@ import HologramHeader from './components/HologramHeader';
 import Dashboard from './components/Dashboard';
 import IdeaCard from './components/IdeaCard';
 import { Idea, IdeaCategory, SupportedLanguage, DICTIONARY } from './types';
-import { generateBrainstormIdeas } from './services/geminiService';
+import { generateBrainstormIdeas, suggestAdminReply } from './services/geminiService';
 import { 
   Plus, Search, Sparkles, X, Sun, Moon, Type, LayoutGrid, 
   BarChart3, Languages, ChevronRight, Filter, AlertCircle, 
-  Shield, Key, LogOut, Trash2, Send
+  Shield, Key, LogOut, Trash2, Send, Wand2, Loader2
 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -27,6 +27,7 @@ const App: React.FC = () => {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [loginPassword, setLoginPassword] = useState('');
   const [adminReplyText, setAdminReplyText] = useState<Record<string, string>>({});
+  const [suggestingReplyId, setSuggestingReplyId] = useState<string | null>(null);
 
   // Modal States
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -99,8 +100,24 @@ const App: React.FC = () => {
     const reply = adminReplyText[id];
     if (!reply) return;
     setIdeas(prev => prev.map(i => i.id === id ? { ...i, adminResponse: reply } : i));
-    setAdminReplyText(prev => ({ ...prev, [id]: '' }));
-    alert("Reactie opgeslagen!");
+    setAdminReplyText(prev => {
+        const next = {...prev};
+        delete next[id];
+        return next;
+    });
+  };
+
+  const handleSuggestReplyAction = async (idea: Idea) => {
+    if (isApiKeyMissing) return;
+    setSuggestingReplyId(idea.id);
+    try {
+      const suggestion = await suggestAdminReply(idea, language === 'nl' ? 'Nederlands' : 'English');
+      if (suggestion) {
+        setAdminReplyText(prev => ({ ...prev, [idea.id]: suggestion }));
+      }
+    } finally {
+      setSuggestingReplyId(null);
+    }
   };
 
   const handleAdminLogin = (e: React.FormEvent) => {
@@ -350,7 +367,7 @@ const App: React.FC = () => {
 
          {activeTab === 'admin' && isAdmin && (
             <div className="space-y-8 animate-fade-in">
-              <div className="flex justify-between items-center border-b dark:border-slate-800 pb-6">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b dark:border-slate-800 pb-6 gap-4">
                 <div>
                   <h2 className="text-3xl md:text-5xl font-black dark:text-white tracking-tighter uppercase leading-none text-rose-500">Beheer Overzicht</h2>
                   <p className="text-slate-500 text-[10px] md:text-sm font-bold tracking-widest uppercase mt-2 opacity-60">Systeembeheer & Moderatie</p>
@@ -358,13 +375,13 @@ const App: React.FC = () => {
               </div>
 
               <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border dark:border-slate-800 overflow-x-auto shadow-2xl">
-                <table className="w-full text-left border-collapse min-w-[800px]">
+                <table className="w-full text-left border-collapse min-w-[900px]">
                   <thead>
                     <tr className="bg-slate-50 dark:bg-slate-800/50 border-b dark:border-slate-800">
                       <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Idee</th>
                       <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Auteur</th>
                       <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Moderatie Reactie</th>
-                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Acties</th>
+                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Beheer</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y dark:divide-slate-800">
@@ -376,29 +393,44 @@ const App: React.FC = () => {
                         </td>
                         <td className="px-8 py-6 text-xs font-bold dark:text-slate-300 align-top">{idea.author}</td>
                         <td className="px-8 py-6 align-top">
-                          <div className="flex items-center space-x-2">
-                             <input 
-                              type="text" 
-                              placeholder={t.replyPlaceholder} 
-                              value={adminReplyText[idea.id] ?? (idea.adminResponse || '')}
-                              onChange={(e) => setAdminReplyText(prev => ({ ...prev, [idea.id]: e.target.value }))}
-                              className="bg-slate-100 dark:bg-slate-800 p-3 rounded-xl text-xs font-bold outline-none border-2 border-transparent focus:border-rose-500 w-64 transition-all dark:text-white"
-                             />
-                             <button 
-                              onClick={() => handleSaveAdminReply(idea.id)} 
-                              className="p-3 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-colors shadow-lg shadow-rose-500/20"
-                             >
-                                <Send size={14} />
-                             </button>
+                          <div className="flex flex-col space-y-2">
+                            <div className="flex items-center space-x-2">
+                               <textarea 
+                                placeholder={t.replyPlaceholder} 
+                                value={adminReplyText[idea.id] ?? (idea.adminResponse || '')}
+                                onChange={(e) => setAdminReplyText(prev => ({ ...prev, [idea.id]: e.target.value }))}
+                                className="bg-slate-100 dark:bg-slate-800 p-3 rounded-xl text-xs font-bold outline-none border-2 border-transparent focus:border-rose-500 w-72 h-20 resize-none transition-all dark:text-white"
+                               />
+                               <div className="flex flex-col space-y-2">
+                                  <button 
+                                    onClick={() => handleSaveAdminReply(idea.id)} 
+                                    title={t.saveReply}
+                                    className="p-3 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-colors shadow-lg shadow-rose-500/20"
+                                  >
+                                      <Send size={14} />
+                                  </button>
+                                  <button 
+                                    onClick={() => handleSuggestReplyAction(idea)}
+                                    disabled={suggestingReplyId === idea.id || isApiKeyMissing}
+                                    title="Stel reactie voor (AI)"
+                                    className="p-3 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-200 rounded-xl hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
+                                  >
+                                      {suggestingReplyId === idea.id ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
+                                  </button>
+                               </div>
+                            </div>
                           </div>
                         </td>
                         <td className="px-8 py-6 text-right align-top">
-                          <button 
-                            onClick={() => handleDeleteIdea(idea.id)} 
-                            className="p-3 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all"
-                          >
-                            <Trash2 size={18} />
-                          </button>
+                          <div className="flex flex-col items-end space-y-2">
+                            <button 
+                                onClick={() => handleDeleteIdea(idea.id)} 
+                                className="flex items-center space-x-2 px-4 py-2 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl transition-all font-black text-[10px] uppercase tracking-widest border border-rose-500/30"
+                            >
+                                <Trash2 size={14} />
+                                <span>Verwijder</span>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
