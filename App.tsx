@@ -12,11 +12,12 @@ import {
   Shield, Key, LogOut, Trash2, Send, Wand2, Loader2, Check, ArrowRight, Share2, Info, Link as LinkIcon, Linkedin, Facebook, Twitter
 } from 'lucide-react';
 
-const LOCAL_STORAGE_KEY = 'digihart_ideas_v1';
+const LOCAL_STORAGE_KEY = 'digihart_ideas_v2';
 
 const App: React.FC = () => {
   // --- States ---
   const [ideas, setIdeas] = useState<Idea[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [language, setLanguage] = useState<SupportedLanguage>('nl');
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'dashboard' | 'ideas' | 'admin'>('dashboard');
@@ -94,16 +95,16 @@ const App: React.FC = () => {
         { id: '3', title: 'AI Health Tutor', description: 'Gepersonaliseerde AI assistent voor chronisch zieken.', category: IdeaCategory.HEALTH, likes: 32, dislikes: 12, createdAt: new Date(), author: 'Marcus' }
       ];
       setIdeas(initial);
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(initial));
     }
+    setIsInitialized(true);
   }, []);
 
-  // Sync ideas to localStorage whenever they change
+  // Sync ideas to localStorage whenever they change, but only after initialization
   useEffect(() => {
-    if (ideas.length > 0) {
+    if (isInitialized) {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(ideas));
     }
-  }, [ideas]);
+  }, [ideas, isInitialized]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -256,26 +257,28 @@ const App: React.FC = () => {
   const handleSocialShare = (platform: 'twitter' | 'linkedin' | 'facebook' | 'copy') => {
     if (!sharingIdea) return;
     
-    const url = window.location.href + `?ideaId=${sharingIdea.id}`;
+    // Fixed URL construction to avoid duplicate query strings
+    const baseUrl = window.location.origin + window.location.pathname;
+    const shareUrlRaw = `${baseUrl}?ideaId=${sharingIdea.id}`;
     const text = encodeURIComponent(`Bekijk dit innovatieve idee op DigiHart.nl: "${sharingIdea.title}"\n`);
     
     let shareUrl = '';
     
     switch(platform) {
       case 'twitter':
-        shareUrl = `https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(url)}`;
+        shareUrl = `https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(shareUrlRaw)}`;
         window.open(shareUrl, '_blank');
         break;
       case 'linkedin':
-        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
+        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrlRaw)}`;
         window.open(shareUrl, '_blank');
         break;
       case 'facebook':
-        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrlRaw)}`;
         window.open(shareUrl, '_blank');
         break;
       case 'copy':
-        navigator.clipboard.writeText(`${sharingIdea.title}\n${url}`);
+        navigator.clipboard.writeText(`${sharingIdea.title}\n${shareUrlRaw}`);
         showToast(t.linkCopied);
         setIsShareOpen(false);
         break;
@@ -554,6 +557,20 @@ const App: React.FC = () => {
             </div>
          )}
       </main>
+
+      {/* Footer */}
+      <footer className="w-full py-10 text-center border-t dark:border-slate-900/50 dark:bg-slate-950">
+        <div className="container mx-auto px-4">
+          <p className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-500 dark:text-slate-600">
+            DigiHart is onderdeel van Buurt-Kiosk ©️
+          </p>
+          <div className="mt-4 flex justify-center items-center space-x-4 opacity-30">
+            <div className="h-px w-8 bg-slate-500"></div>
+            <Sparkles size={14} className="text-slate-500" />
+            <div className="h-px w-8 bg-slate-500"></div>
+          </div>
+        </div>
+      </footer>
 
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center space-x-3 z-50">
         <button onClick={() => setIsAIOpen(true)} className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 md:px-8 py-4 md:py-5 rounded-[2rem] shadow-2xl shadow-pink-600/30 hover:scale-105 transition-all active:scale-95 font-black uppercase tracking-widest text-[9px] md:text-[10px] flex items-center gap-2 md:gap-3">
