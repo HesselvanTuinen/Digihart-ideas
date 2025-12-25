@@ -84,18 +84,17 @@ const Dashboard: React.FC<DashboardProps> = ({ ideas, content, onExport }) => {
         </div>
         <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] shadow-xl border dark:border-slate-800 group relative overflow-hidden">
             <div className="absolute -right-4 -top-4 text-emerald-500/10 group-hover:scale-125 transition-transform duration-1000"><Activity size={100}/></div>
-            <p className="text-slate-500 text-[9px] font-black uppercase tracking-widest mb-1">Total Engagement</p>
+            <p className="text-slate-500 text-[9px] font-black uppercase tracking-widest mb-1">{content.engagement}</p>
             <h3 className="text-4xl font-black dark:text-white leading-none">{stats.totalEngagement}</h3>
         </div>
         <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] shadow-xl border dark:border-slate-800 group relative overflow-hidden">
             <div className="absolute -right-4 -top-4 text-purple-500/10 group-hover:scale-125 transition-transform duration-1000"><ListChecks size={100}/></div>
-            <p className="text-slate-500 text-[9px] font-black uppercase tracking-widest mb-1">Categories Active</p>
+            <p className="text-slate-500 text-[9px] font-black uppercase tracking-widest mb-1">{content.activeCategories}</p>
             <h3 className="text-4xl font-black dark:text-white leading-none">{stats.categoryData.length}</h3>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Top Ideas Chart */}
           <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-xl border dark:border-slate-800 h-[400px]">
             <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-6 flex items-center gap-2">
                 <TrendingUp size={14} className="text-cyan-500" /> {content.topIdeasChart}
@@ -106,10 +105,7 @@ const Dashboard: React.FC<DashboardProps> = ({ ideas, content, onExport }) => {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#33415520" />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: 800, fill: '#64748b'}} />
                     <YAxis axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: 800, fill: '#64748b'}} />
-                    <Tooltip 
-                      cursor={{fill: '#0ea5e910'}} 
-                      contentStyle={{borderRadius: '16px', border: 'none', background: '#0f172a', color: '#fff', fontSize: '10px', fontWeight: 800}}
-                    />
+                    <Tooltip cursor={{fill: '#0ea5e910'}} contentStyle={{borderRadius: '16px', border: 'none', background: '#0f172a', color: '#fff', fontSize: '10px', fontWeight: 800}} />
                     <Bar dataKey="likes" radius={[10, 10, 0, 0]} barSize={40}>
                         {stats.topIdeasData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -120,7 +116,6 @@ const Dashboard: React.FC<DashboardProps> = ({ ideas, content, onExport }) => {
             </div>
           </div>
 
-          {/* Timeline Chart */}
           <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-xl border dark:border-slate-800 h-[400px]">
             <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-6 flex items-center gap-2">
                 <Activity size={14} className="text-purple-500" /> {content.timelineChart}
@@ -144,7 +139,6 @@ const Dashboard: React.FC<DashboardProps> = ({ ideas, content, onExport }) => {
             </div>
           </div>
 
-          {/* Category Distribution (Translated) */}
           <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-xl border dark:border-slate-800 h-[400px] flex flex-col items-center lg:col-span-2">
             <h4 className="w-full text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
                 <PieIcon size={14} className="text-pink-500" /> {content.categoryChart}
@@ -153,13 +147,7 @@ const Dashboard: React.FC<DashboardProps> = ({ ideas, content, onExport }) => {
               <div className="h-full w-full md:w-1/2">
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                        <Pie
-                            data={stats.categoryData}
-                            innerRadius="60%"
-                            outerRadius="85%"
-                            paddingAngle={5}
-                            dataKey="value"
-                        >
+                        <Pie data={stats.categoryData} innerRadius="60%" outerRadius="85%" paddingAngle={5} dataKey="value">
                             {stats.categoryData.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />
                             ))}

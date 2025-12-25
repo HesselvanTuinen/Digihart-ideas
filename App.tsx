@@ -4,12 +4,12 @@ import HologramHeader from './components/HologramHeader';
 import Dashboard from './components/Dashboard';
 import IdeaCard from './components/IdeaCard';
 import { Idea, IdeaCategory, SupportedLanguage, DICTIONARY } from './types';
-import { generateBrainstormIdeas, suggestAdminReply, generateStructuredIdeas } from './services/geminiService';
+import { suggestAdminReply, generateStructuredIdeas } from './services/geminiService';
 import { GoogleGenAI } from "@google/genai";
 import { 
   Plus, Search, Sparkles, X, Sun, Moon, Type, LayoutGrid, 
-  BarChart3, Languages, ChevronRight, Filter, AlertCircle, 
-  Shield, Key, LogOut, Trash2, Send, Wand2, Loader2, Check, ArrowRight
+  BarChart3, Languages, Filter, AlertCircle, 
+  Shield, Key, LogOut, Trash2, Send, Wand2, Loader2, Check, ArrowRight, Share2, Info, Link as LinkIcon, Linkedin, Facebook, Twitter
 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -34,6 +34,8 @@ const App: React.FC = () => {
   // Modal States
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isAIOpen, setIsAIOpen] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  const [sharingIdea, setSharingIdea] = useState<Idea | null>(null);
 
   // Form States
   const [newTitle, setNewTitle] = useState('');
@@ -47,17 +49,24 @@ const App: React.FC = () => {
   const [aiStructuredResults, setAiStructuredResults] = useState<Partial<Idea>[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
 
+  // Toast State
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
   const t = DICTIONARY[language];
   
   const isApiKeyMissing = useMemo(() => {
     try {
-      const env = (window as any).process?.env || (typeof process !== 'undefined' ? process.env : null);
-      const key = env?.API_KEY;
+      const key = process.env.API_KEY;
       return !key || key === 'undefined' || key.length < 5;
     } catch (e) {
       return true;
     }
   }, []);
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   // --- Initial Setup ---
   useEffect(() => {
@@ -92,10 +101,37 @@ const App: React.FC = () => {
     setIdeas(prev => prev.map(i => i.id === id ? { ...i, dislikes: i.dislikes + 1 } : i));
   };
 
+  const handleExport = () => {
+    const headers = ['ID', 'Title', 'Description', 'Category', 'Author', 'Likes', 'Dislikes', 'Created At', 'Admin Response'];
+    const csvContent = ideas.map(idea => [
+      idea.id,
+      `"${idea.title.replace(/"/g, '""')}"`,
+      `"${idea.description.replace(/"/g, '""')}"`,
+      idea.category,
+      `"${idea.author.replace(/"/g, '""')}"`,
+      idea.likes,
+      idea.dislikes,
+      new Date(idea.createdAt).toISOString(),
+      `"${(idea.adminResponse || '').replace(/"/g, '""')}"`
+    ].join(',')).join('\n');
+    
+    const blob = new Blob([headers.join(',') + '\n' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `digihart_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast(language === 'nl' ? "Export gedownload!" : "Export downloaded!");
+  };
+
   const handleDeleteIdea = (id: string) => {
     setIdeas(prev => prev.filter(i => i.id !== id));
     if (selectedIdeaId === id) setSelectedIdeaId(null);
     setConfirmDeleteId(null);
+    showToast(language === 'nl' ? "Idee verwijderd." : "Idea deleted.", "info");
   };
 
   const handleSaveAdminReply = (id: string) => {
@@ -107,13 +143,17 @@ const App: React.FC = () => {
         delete next[id];
         return next;
     });
+    showToast(language === 'nl' ? "Reactie opgeslagen!" : "Reply saved!");
   };
 
   const handleSuggestReplyAction = async (idea: Idea) => {
     if (isApiKeyMissing) return;
     setSuggestingReplyId(idea.id);
     try {
-      const suggestion = await suggestAdminReply(idea, language === 'nl' ? 'Nederlands' : 'English');
+      const languageMap: Record<SupportedLanguage, string> = {
+        nl: 'Dutch', en: 'English', es: 'Spanish', de: 'German', ar: 'Arabic'
+      };
+      const suggestion = await suggestAdminReply(idea, languageMap[language]);
       if (suggestion) {
         setAdminReplyText(prev => ({ ...prev, [idea.id]: suggestion }));
       }
@@ -127,26 +167,25 @@ const App: React.FC = () => {
     setRefiningIdea(true);
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const prompt = `Refine this idea for an innovation platform. 
-      Improve the title and description to be more compelling and professional.
+      const prompt = `Refine this idea for an innovation platform. Improve the title and description.
       Title: ${newTitle}
       Description: ${newDesc}
       Category: ${newCategory}
-      Provide the response in JSON format with keys "title" and "description".`;
+      Current Language: ${language}
+      Provide JSON with "title" and "description".`;
       
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: prompt,
-        config: {
-          responseMimeType: 'application/json'
-        }
+        config: { responseMimeType: 'application/json' }
       });
       
       const result = JSON.parse(response.text || '{}');
       if (result.title) setNewTitle(result.title);
       if (result.description) setNewDesc(result.description);
+      showToast(language === 'nl' ? "AI verbetering voltooid!" : "AI refinement complete!");
     } catch (e) {
-      console.error("Refine error", e);
+      showToast("AI Refinement error.", "error");
     } finally {
       setRefiningIdea(false);
     }
@@ -158,8 +197,9 @@ const App: React.FC = () => {
       setIsAdmin(true);
       setIsLoginOpen(false);
       setLoginPassword('');
+      showToast(language === 'nl' ? "Beheer geactiveerd." : "Admin activated.", "success");
     } else {
-      alert("Fout wachtwoord!");
+      showToast(language === 'nl' ? "Fout wachtwoord." : "Invalid password.", "error");
     }
   };
 
@@ -181,32 +221,41 @@ const App: React.FC = () => {
     setNewTitle(''); setNewDesc(''); setNewAuthor('');
     setActiveTab('ideas');
     setSelectedIdeaId(idea.id);
+    showToast(language === 'nl' ? "Idee geplaatst!" : "Idea posted!");
   };
 
-  const handleExport = () => {
-    const headers = ['ID', 'Title', 'Category', 'Author', 'Likes', 'Dislikes', 'Created At', 'Description', 'Admin Response'];
-    const csvData = ideas.map(i => [
-      i.id,
-      `"${i.title.replace(/"/g, '""')}"`,
-      i.category,
-      `"${i.author.replace(/"/g, '""')}"`,
-      i.likes,
-      i.dislikes,
-      i.createdAt.toISOString(),
-      `"${i.description.replace(/"/g, '""')}"`,
-      `"${(i.adminResponse || '').replace(/"/g, '""')}"`
-    ]);
+  const handleShareClick = (idea: Idea) => {
+    setSharingIdea(idea);
+    setIsShareOpen(true);
+  };
 
-    const csvContent = [headers, ...csvData].map(e => e.join(",")).join("\n");
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `digihart_ideas_${new Date().toLocaleDateString()}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleSocialShare = (platform: 'twitter' | 'linkedin' | 'facebook' | 'copy') => {
+    if (!sharingIdea) return;
+    
+    const url = window.location.href + `?ideaId=${sharingIdea.id}`;
+    const text = encodeURIComponent(`Bekijk dit innovatieve idee op DigiHart.nl: "${sharingIdea.title}"\n`);
+    
+    let shareUrl = '';
+    
+    switch(platform) {
+      case 'twitter':
+        shareUrl = `https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(url)}`;
+        window.open(shareUrl, '_blank');
+        break;
+      case 'linkedin':
+        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
+        window.open(shareUrl, '_blank');
+        break;
+      case 'facebook':
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+        window.open(shareUrl, '_blank');
+        break;
+      case 'copy':
+        navigator.clipboard.writeText(`${sharingIdea.title}\n${url}`);
+        showToast(t.linkCopied);
+        setIsShareOpen(false);
+        break;
+    }
   };
 
   const handleAIBrainstorm = async () => {
@@ -214,21 +263,16 @@ const App: React.FC = () => {
     setAiLoading(true);
     setAiStructuredResults([]);
     try {
-      const results = await generateStructuredIdeas(aiTopic, language === 'nl' ? 'Nederlands' : 'English');
+      const languageMap: Record<SupportedLanguage, string> = {
+        nl: 'Dutch', en: 'English', es: 'Spanish', de: 'German', ar: 'Arabic'
+      };
+      const results = await generateStructuredIdeas(aiTopic, languageMap[language]);
       setAiStructuredResults(results);
     } catch (err) {
-      console.error(err);
+      showToast("AI error.", "error");
     } finally {
       setAiLoading(false);
     }
-  };
-
-  const adoptAIIdea = (idea: Partial<Idea>) => {
-    if (idea.title) setNewTitle(idea.title);
-    if (idea.description) setNewDesc(idea.description);
-    if (idea.category) setNewCategory(idea.category as IdeaCategory);
-    setIsAIOpen(false);
-    setIsFormOpen(true);
   };
 
   const filteredAndSortedIdeas = useMemo(() => {
@@ -237,13 +281,11 @@ const App: React.FC = () => {
       i.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       i.category.toLowerCase().includes(searchTerm.toLowerCase())
     );
-
     if (sortBy === 'newest') {
       result = [...result].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     } else {
       result = [...result].sort((a, b) => b.likes - a.likes);
     }
-
     return result;
   }, [ideas, searchTerm, sortBy]);
 
@@ -253,7 +295,19 @@ const App: React.FC = () => {
     <div className={`min-h-screen flex flex-col pb-safe bg-slate-50 dark:bg-slate-950 transition-colors duration-500 ${highContrast ? 'contrast-high' : ''}`}>
       <HologramHeader />
       
-      {/* Navigation Bar */}
+      <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] w-full max-w-sm px-4 pointer-events-none">
+        {toast && (
+          <div className={`p-4 rounded-2xl shadow-2xl backdrop-blur-xl border flex items-center gap-3 animate-slide-up pointer-events-auto
+            ${toast.type === 'success' ? 'bg-cyan-500/90 text-white border-cyan-400' : 
+              toast.type === 'error' ? 'bg-rose-500/90 text-white border-rose-400' : 
+              'bg-slate-800/90 text-white border-slate-700'}
+          `}>
+            {toast.type === 'success' ? <Check size={18} /> : toast.type === 'error' ? <AlertCircle size={18} /> : <Info size={18} />}
+            <span className="text-xs font-black uppercase tracking-widest">{toast.message}</span>
+          </div>
+        )}
+      </div>
+
       <nav className="sticky top-0 z-40 glass dark:bg-slate-950/90 backdrop-blur-xl border-b dark:border-slate-800 px-4 py-3 shadow-2xl">
         <div className="container mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
           <div className="flex bg-slate-200/50 dark:bg-slate-900 p-1 rounded-2xl w-full md:w-auto">
@@ -261,11 +315,11 @@ const App: React.FC = () => {
               <BarChart3 size={14} /> <span>{t.dashboard}</span>
             </button>
             <button onClick={() => setActiveTab('ideas')} className={`flex-1 md:flex-none flex items-center justify-center space-x-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all ${activeTab === 'ideas' ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-500 hover:text-cyan-500'}`}>
-              <LayoutGrid size={14} /> <span>Ideeën</span>
+              <LayoutGrid size={14} /> <span>{t.ideas}</span>
             </button>
             {isAdmin && (
               <button onClick={() => setActiveTab('admin')} className={`flex-1 md:flex-none flex items-center justify-center space-x-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all ${activeTab === 'admin' ? 'bg-rose-600 text-white shadow-lg' : 'text-slate-500 hover:text-rose-500'}`}>
-                <Shield size={14} /> <span>Beheer</span>
+                <Shield size={14} /> <span>{t.admin}</span>
               </button>
             )}
           </div>
@@ -285,14 +339,12 @@ const App: React.FC = () => {
              <div className="flex items-center space-x-1 rtl:space-x-reverse">
                 <button 
                   onClick={() => setHighContrast(!highContrast)} 
-                  title="Contrast"
                   className={`p-2 rounded-lg transition-colors ${highContrast ? 'text-cyan-500 bg-cyan-500/10' : 'text-slate-400 hover:text-cyan-500'}`}
                 >
                   <Type size={18}/>
                 </button>
                 <button 
                   onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} 
-                  title="Thema"
                   className="p-2 text-slate-400 hover:text-cyan-500 transition-colors"
                 >
                   {theme === 'dark' ? <Sun size={18}/> : <Moon size={18}/>}
@@ -312,11 +364,11 @@ const App: React.FC = () => {
                 <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-1"></div>
 
                 {isAdmin ? (
-                  <button onClick={() => setIsAdmin(false)} title="Uitloggen" className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all">
+                  <button onClick={() => setIsAdmin(false)} className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all">
                     <LogOut size={18} />
                   </button>
                 ) : (
-                  <button onClick={() => setIsLoginOpen(true)} title="Admin Login" className="p-2 text-slate-400 hover:text-cyan-500 transition-colors">
+                  <button onClick={() => setIsLoginOpen(true)} className="p-2 text-slate-400 hover:text-cyan-500 transition-colors">
                     <Shield size={18} />
                   </button>
                 )}
@@ -325,7 +377,6 @@ const App: React.FC = () => {
         </div>
       </nav>
 
-      {/* Main Content */}
       <main className="container mx-auto px-4 py-8 md:py-12 flex-grow mb-24">
          {activeTab === 'dashboard' && (
            <Dashboard ideas={ideas} content={t} onExport={handleExport} />
@@ -336,22 +387,17 @@ const App: React.FC = () => {
              <div className="w-full lg:w-3/5 space-y-6">
                 <div className="flex items-center space-x-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
                    <Filter size={12} />
-                   <span>Sorteer:</span>
-                   <button onClick={() => setSortBy('newest')} className={`px-3 py-1 rounded-full transition-all ${sortBy === 'newest' ? 'bg-cyan-500 text-white shadow-md' : 'hover:text-cyan-500'}`}>Nieuwste</button>
-                   <button onClick={() => setSortBy('likes')} className={`px-3 py-1 rounded-full transition-all ${sortBy === 'likes' ? 'bg-cyan-500 text-white shadow-md' : 'hover:text-cyan-500'}`}>Meest Geliefd</button>
+                   <span>{t.sortBy}</span>
+                   <button onClick={() => setSortBy('newest')} className={`px-3 py-1 rounded-full transition-all ${sortBy === 'newest' ? 'bg-cyan-500 text-white shadow-md' : 'hover:text-cyan-500'}`}>{t.newest}</button>
+                   <button onClick={() => setSortBy('likes')} className={`px-3 py-1 rounded-full transition-all ${sortBy === 'likes' ? 'bg-cyan-500 text-white shadow-md' : 'hover:text-cyan-500'}`}>{t.mostLoved}</button>
                 </div>
 
                 <div className="grid grid-cols-1 gap-5">
                   {filteredAndSortedIdeas.length > 0 ? filteredAndSortedIdeas.map(idea => (
                     <IdeaCard 
-                      key={idea.id} 
-                      idea={idea} 
-                      onLike={handleLike} 
-                      onDislike={handleDislike} 
-                      onDelete={isAdmin ? handleDeleteIdea : undefined}
-                      onClick={() => setSelectedIdeaId(idea.id)} 
-                      isSelected={idea.id === selectedIdeaId}
-                      isAdmin={isAdmin}
+                      key={idea.id} idea={idea} onLike={handleLike} onDislike={handleDislike} 
+                      onDelete={isAdmin ? handleDeleteIdea : undefined} onShare={handleShareClick}
+                      onClick={() => setSelectedIdeaId(idea.id)} isSelected={idea.id === selectedIdeaId} isAdmin={isAdmin} t={t}
                     />
                   )) : (
                     <div className="text-center py-20 bg-slate-100 dark:bg-slate-900 rounded-[2rem] border-2 border-dashed border-slate-200 dark:border-slate-800">
@@ -361,7 +407,6 @@ const App: React.FC = () => {
                 </div>
              </div>
              
-             {/* Detail Sidebar */}
              <div className="w-full lg:w-2/5">
                 <div className="sticky top-32 glass dark:bg-slate-900 rounded-[2.5rem] p-8 md:p-10 shadow-2xl min-h-[400px] lg:min-h-[500px] border dark:border-slate-800 overflow-hidden group">
                     <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-1000">
@@ -369,7 +414,12 @@ const App: React.FC = () => {
                     </div>
                     {selectedIdea ? (
                       <div className="space-y-6 animate-fade-in relative z-10">
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-cyan-500">{t.categories[selectedIdea.category]}</span>
+                        <div className="flex justify-between items-start">
+                          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-cyan-500">{t.categories[selectedIdea.category]}</span>
+                          <button onClick={() => handleShareClick(selectedIdea)} className="p-2 bg-cyan-500/10 text-cyan-500 rounded-xl hover:bg-cyan-500 hover:text-white transition-all">
+                            <Share2 size={16} />
+                          </button>
+                        </div>
                         <h2 className="text-3xl md:text-4xl font-black dark:text-white leading-[1.1] tracking-tight">{selectedIdea.title}</h2>
                         <div className="bg-slate-50 dark:bg-slate-950/50 p-6 rounded-3xl border dark:border-slate-800">
                            <p className="text-slate-600 dark:text-slate-300 text-base md:text-lg leading-relaxed font-medium">{selectedIdea.description}</p>
@@ -397,7 +447,7 @@ const App: React.FC = () => {
                         <div className="p-5 rounded-full bg-slate-200 dark:bg-slate-800">
                           <LayoutGrid size={40} />
                         </div>
-                        <p className="text-xs font-black uppercase tracking-widest max-w-[200px]">Selecteer een idee om details te bekijken</p>
+                        <p className="text-xs font-black uppercase tracking-widest max-w-[200px]">{t.selectIdeaPrompt}</p>
                       </div>
                     )}
                 </div>
@@ -409,8 +459,8 @@ const App: React.FC = () => {
             <div className="space-y-8 animate-fade-in">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b dark:border-slate-800 pb-6 gap-4">
                 <div>
-                  <h2 className="text-3xl md:text-5xl font-black dark:text-white tracking-tighter uppercase leading-none text-rose-500">Beheer Overzicht</h2>
-                  <p className="text-slate-500 text-[10px] md:text-sm font-bold tracking-widest uppercase mt-2 opacity-60">Systeembeheer & Moderatie</p>
+                  <h2 className="text-3xl md:text-5xl font-black dark:text-white tracking-tighter uppercase leading-none text-rose-500">{t.adminOverview}</h2>
+                  <p className="text-slate-500 text-[10px] md:text-sm font-bold tracking-widest uppercase mt-2 opacity-60">{t.adminSub}</p>
                 </div>
               </div>
 
@@ -418,10 +468,10 @@ const App: React.FC = () => {
                 <table className="w-full text-left border-collapse min-w-[900px]">
                   <thead>
                     <tr className="bg-slate-50 dark:bg-slate-800/50 border-b dark:border-slate-800">
-                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Idee</th>
-                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Auteur</th>
-                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Moderatie Reactie</th>
-                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Beheer</th>
+                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">{t.tableIdea}</th>
+                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">{t.tableAuthor}</th>
+                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">{t.tableModeration}</th>
+                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">{t.tableAction}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y dark:divide-slate-800">
@@ -442,17 +492,12 @@ const App: React.FC = () => {
                                 className="bg-slate-100 dark:bg-slate-800 p-3 rounded-xl text-xs font-bold outline-none border-2 border-transparent focus:border-rose-500 w-72 h-20 resize-none transition-all dark:text-white"
                                />
                                <div className="flex flex-col space-y-2">
-                                  <button 
-                                    onClick={() => handleSaveAdminReply(idea.id)} 
-                                    title={t.saveReply}
-                                    className="p-3 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-colors shadow-lg shadow-rose-500/20"
-                                  >
+                                  <button onClick={() => handleSaveAdminReply(idea.id)} className="p-3 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-colors shadow-lg shadow-rose-500/20">
                                       <Send size={14} />
                                   </button>
                                   <button 
                                     onClick={() => handleSuggestReplyAction(idea)}
                                     disabled={suggestingReplyId === idea.id || isApiKeyMissing}
-                                    title="Stel reactie voor (AI)"
                                     className="p-3 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-200 rounded-xl hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
                                   >
                                       {suggestingReplyId === idea.id ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
@@ -469,12 +514,8 @@ const App: React.FC = () => {
                                     <button onClick={() => setConfirmDeleteId(null)} className="p-2 bg-black/20 rounded-lg text-white"><X size={14} /></button>
                                 </div>
                             ) : (
-                                <button 
-                                    onClick={() => setConfirmDeleteId(idea.id)} 
-                                    className="flex items-center space-x-2 px-4 py-2 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl transition-all font-black text-[10px] uppercase tracking-widest border border-rose-500/30"
-                                >
-                                    <Trash2 size={14} />
-                                    <span>Verwijder</span>
+                                <button onClick={() => setConfirmDeleteId(idea.id)} className="flex items-center space-x-2 px-4 py-2 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl transition-all font-black text-[10px] uppercase tracking-widest border border-rose-500/30">
+                                    <Trash2 size={14} /> <span>{t.delete}</span>
                                 </button>
                             )}
                           </div>
@@ -488,81 +529,84 @@ const App: React.FC = () => {
          )}
       </main>
 
-      {/* Floating Action Buttons */}
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center space-x-3 z-50">
-        <button 
-          onClick={() => setIsAIOpen(true)} 
-          className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 md:px-8 py-4 md:py-5 rounded-[2rem] shadow-2xl shadow-pink-600/30 hover:scale-105 transition-all active:scale-95 font-black uppercase tracking-widest text-[9px] md:text-[10px] flex items-center gap-2 md:gap-3"
-        >
+        <button onClick={() => setIsAIOpen(true)} className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 md:px-8 py-4 md:py-5 rounded-[2rem] shadow-2xl shadow-pink-600/30 hover:scale-105 transition-all active:scale-95 font-black uppercase tracking-widest text-[9px] md:text-[10px] flex items-center gap-2 md:gap-3">
           <Sparkles size={18}/> <span className="hidden sm:inline">{t.generateAI}</span><span className="sm:hidden">AI</span>
         </button>
-        <button 
-          onClick={() => setIsFormOpen(true)} 
-          className="bg-cyan-600 text-white p-5 md:p-6 rounded-[1.8rem] md:rounded-[2rem] shadow-2xl shadow-cyan-600/30 hover:scale-105 transition-all active:scale-95 group"
-        >
+        <button onClick={() => setIsFormOpen(true)} className="bg-cyan-600 text-white p-5 md:p-6 rounded-[1.8rem] md:rounded-[2rem] shadow-2xl shadow-cyan-600/30 hover:scale-105 transition-all active:scale-95 group">
           <Plus size={28} className="group-hover:rotate-90 transition-transform duration-500"/>
         </button>
       </div>
 
-      {/* Admin Login Modal */}
+      {/* Share Modal */}
+      {isShareOpen && sharingIdea && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-md animate-fade-in">
+           <div className="bg-white dark:bg-slate-900 border-2 border-cyan-500/20 rounded-[2.5rem] w-full max-w-sm p-10 shadow-2xl relative overflow-hidden">
+              <button onClick={() => setIsShareOpen(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"><X size={24}/></button>
+              <div className="flex flex-col items-center text-center space-y-8">
+                 <div className="p-5 bg-cyan-500/10 rounded-full text-cyan-500">
+                    <Share2 size={32} />
+                 </div>
+                 <div className="space-y-2">
+                   <h2 className="text-xl font-black uppercase tracking-widest dark:text-white">{t.shareTitle}</h2>
+                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-4">{sharingIdea.title}</p>
+                 </div>
+                 <div className="grid grid-cols-2 gap-4 w-full">
+                    <button onClick={() => handleSocialShare('twitter')} className="flex flex-col items-center justify-center gap-2 p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl hover:bg-cyan-500 hover:text-white transition-all group">
+                       <Twitter size={24} className="text-cyan-500 group-hover:text-white" />
+                       <span className="text-[8px] font-black uppercase">Twitter / X</span>
+                    </button>
+                    <button onClick={() => handleSocialShare('linkedin')} className="flex flex-col items-center justify-center gap-2 p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl hover:bg-blue-600 hover:text-white transition-all group">
+                       <Linkedin size={24} className="text-blue-600 group-hover:text-white" />
+                       <span className="text-[8px] font-black uppercase">LinkedIn</span>
+                    </button>
+                    <button onClick={() => handleSocialShare('facebook')} className="flex flex-col items-center justify-center gap-2 p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl hover:bg-blue-700 hover:text-white transition-all group">
+                       <Facebook size={24} className="text-blue-700 group-hover:text-white" />
+                       <span className="text-[8px] font-black uppercase">Facebook</span>
+                    </button>
+                    <button onClick={() => handleSocialShare('copy')} className="flex flex-col items-center justify-center gap-2 p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl hover:bg-slate-700 hover:text-white transition-all group">
+                       <LinkIcon size={24} className="text-slate-600 group-hover:text-white" />
+                       <span className="text-[8px] font-black uppercase">{t.copyLink}</span>
+                    </button>
+                 </div>
+              </div>
+           </div>
+        </div>
+      )}
+
       {isLoginOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-md animate-fade-in">
            <div className="bg-white dark:bg-slate-900 border-2 border-cyan-500/20 rounded-[2rem] w-full max-w-sm p-8 shadow-2xl relative">
               <button onClick={() => setIsLoginOpen(false)} className="absolute top-4 right-4 text-slate-400"><X size={20}/></button>
               <div className="flex flex-col items-center text-center space-y-4">
-                 <div className="p-4 bg-cyan-500/10 rounded-full text-cyan-500">
-                    <Key size={32} />
-                 </div>
+                 <div className="p-4 bg-cyan-500/10 rounded-full text-cyan-500"><Key size={32} /></div>
                  <h2 className="text-xl font-black uppercase tracking-widest dark:text-white">{t.adminLogin}</h2>
                  <form onSubmit={handleAdminLogin} className="w-full space-y-4">
-                    <input 
-                      type="password" 
-                      placeholder="Wachtwoord" 
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                      className="w-full bg-slate-100 dark:bg-slate-800 p-4 rounded-xl outline-none border-2 border-transparent focus:border-cyan-500 font-bold dark:text-white transition-all text-center"
-                      autoFocus
-                    />
-                    <button type="submit" className="w-full bg-cyan-600 text-white py-4 rounded-xl font-black uppercase tracking-[0.2em] text-[10px]">Verifiëren</button>
-                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Wachtwoord: admin123</p>
+                    <input type="password" placeholder="Wachtwoord" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} className="w-full bg-slate-100 dark:bg-slate-800 p-4 rounded-xl outline-none border-2 border-transparent focus:border-cyan-500 font-bold dark:text-white transition-all text-center" autoFocus />
+                    <button type="submit" className="w-full bg-cyan-600 text-white py-4 rounded-xl font-black uppercase tracking-[0.2em] text-[10px]">{t.verify}</button>
+                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">{t.pwdHint}</p>
                  </form>
               </div>
            </div>
         </div>
       )}
 
-      {/* AI Modal */}
       {isAIOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-6 bg-slate-900/95 backdrop-blur-xl animate-fade-in">
            <div className="bg-white dark:bg-slate-900 border-2 border-pink-500/20 rounded-[2.5rem] md:rounded-[3.5rem] w-full max-w-3xl max-h-[90vh] overflow-y-auto p-8 md:p-12 relative overflow-hidden shadow-[0_0_100px_rgba(236,72,153,0.15)]">
-              <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none rotate-12"><Sparkles size={200} className="text-pink-500"/></div>
               <button onClick={() => setIsAIOpen(false)} className="absolute top-6 right-6 text-slate-400 hover:text-white p-2 transition-colors"><X size={28}/></button>
-              
-              <h2 className="text-2xl md:text-4xl font-black mb-1 flex items-center gap-3 dark:text-white tracking-tighter uppercase"><Sparkles className="text-pink-500 animate-pulse"/> AI Brainstorming</h2>
-              <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mb-8">Laat Gemini je helpen met het bedenken van baanbrekende ideeën</p>
-              
+              <h2 className="text-2xl md:text-4xl font-black mb-1 flex items-center gap-3 dark:text-white tracking-tighter uppercase"><Sparkles className="text-pink-500 animate-pulse"/> {t.generateAI}</h2>
+              <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mb-8">DigiHart AI Brainstormer</p>
               <div className="space-y-8">
                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Waar wil je over brainstormen?</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t.aiPromptLabel}</label>
                     <div className="flex gap-3">
-                      <input 
-                        type="text" 
-                        value={aiTopic} 
-                        onChange={(e)=>setAiTopic(e.target.value)} 
-                        placeholder="Bijv: 'Groene stroom in de wijk' of 'Zorg voor ouderen'..." 
-                        className="flex-grow bg-slate-50 dark:bg-slate-800 p-4 rounded-xl outline-none border-2 border-transparent focus:border-pink-500 font-bold dark:text-white transition-all"
-                        onKeyDown={(e) => e.key === 'Enter' && handleAIBrainstorm()}
-                      />
-                      <button 
-                        onClick={handleAIBrainstorm} 
-                        disabled={aiLoading || !aiTopic || isApiKeyMissing} 
-                        className="bg-gradient-to-r from-pink-600 to-purple-600 text-white px-8 rounded-xl font-black shadow-lg shadow-pink-600/20 hover:scale-[1.05] transition-all disabled:opacity-30 uppercase text-[10px] tracking-widest"
-                      >
+                      <input type="text" value={aiTopic} onChange={(e)=>setAiTopic(e.target.value)} placeholder={t.aiInputPlaceholder} className="flex-grow bg-slate-50 dark:bg-slate-800 p-4 rounded-xl outline-none border-2 border-transparent focus:border-pink-500 font-bold dark:text-white transition-all" onKeyDown={(e) => e.key === 'Enter' && handleAIBrainstorm()} />
+                      <button onClick={handleAIBrainstorm} disabled={aiLoading || !aiTopic || isApiKeyMissing} className="bg-gradient-to-r from-pink-600 to-purple-600 text-white px-8 rounded-xl font-black shadow-lg shadow-pink-600/20 hover:scale-[1.05] transition-all disabled:opacity-30 uppercase text-[10px] tracking-widest">
                         {aiLoading ? <Loader2 size={18} className="animate-spin" /> : <ArrowRight size={18} />}
                       </button>
                     </div>
                  </div>
-
                  {aiStructuredResults.length > 0 && (
                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 animate-slide-up">
                      {aiStructuredResults.map((result, idx) => (
@@ -572,23 +616,20 @@ const App: React.FC = () => {
                             <h4 className="text-sm font-black dark:text-white leading-tight">{result.title}</h4>
                             <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-3 leading-relaxed">{result.description}</p>
                          </div>
-                         <button 
-                          onClick={() => adoptAIIdea(result)}
-                          className="mt-6 w-full py-3 bg-white dark:bg-slate-700 dark:text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-md hover:bg-pink-500 hover:text-white transition-all group-hover:scale-[1.02]"
-                         >
-                            Dit idee uitwerken
+                         <button onClick={() => {
+                            setNewTitle(result.title || ''); setNewDesc(result.description || ''); setNewCategory(result.category as IdeaCategory);
+                            setIsAIOpen(false); setIsFormOpen(true);
+                         }} className="mt-6 w-full py-3 bg-white dark:bg-slate-700 dark:text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-md hover:bg-pink-500 hover:text-white transition-all group-hover:scale-[1.02]">
+                            {t.adoptAI}
                          </button>
                        </div>
                      ))}
                    </div>
                  )}
-
                  {aiLoading && (
                    <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-                      <div className="p-4 bg-pink-500/10 rounded-full animate-pulse">
-                        <Sparkles size={40} className="text-pink-500" />
-                      </div>
-                      <p className="text-xs font-black uppercase tracking-widest text-pink-500 animate-pulse">Gemini is aan het nadenken...</p>
+                      <div className="p-4 bg-pink-500/10 rounded-full animate-pulse"><Sparkles size={40} className="text-pink-500" /></div>
+                      <p className="text-xs font-black uppercase tracking-widest text-pink-500 animate-pulse">{t.aiThinking}</p>
                    </div>
                  )}
               </div>
@@ -596,7 +637,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Add Idea Modal */}
       {isFormOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-6 bg-slate-900/90 backdrop-blur-md animate-fade-in">
           <div className="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-[2.5rem] md:rounded-[3rem] w-full max-w-xl max-h-[90vh] overflow-y-auto p-8 md:p-10 shadow-2xl relative">
@@ -608,32 +648,27 @@ const App: React.FC = () => {
              <form onSubmit={handleAddIdea} className="space-y-5">
                 <div className="space-y-1.5">
                    <div className="flex justify-between items-center">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Titel</label>
-                      <button 
-                        type="button"
-                        onClick={handleRefineIdea}
-                        disabled={!newTitle || refiningIdea || isApiKeyMissing}
-                        className="flex items-center gap-1.5 text-[8px] font-black text-purple-500 uppercase hover:text-purple-400 disabled:opacity-30 transition-all"
-                      >
-                         {refiningIdea ? <Loader2 size={10} className="animate-spin"/> : <Sparkles size={10}/>} Verbeter Titel/Omschrijving (AI)
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t.titleLabel}</label>
+                      <button type="button" onClick={handleRefineIdea} disabled={!newTitle || refiningIdea || isApiKeyMissing} className="flex items-center gap-1.5 text-[8px] font-black text-purple-500 uppercase hover:text-purple-400 disabled:opacity-30 transition-all">
+                         {refiningIdea ? <Loader2 size={10} className="animate-spin"/> : <Sparkles size={10}/>} {t.refineAI}
                       </button>
                    </div>
                    <input type="text" placeholder={t.titlePlaceholder} value={newTitle} onChange={(e)=>setNewTitle(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-xl outline-none border-2 border-transparent focus:border-cyan-500 font-bold dark:text-white transition-all" required/>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Categorie</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t.categoryLabel}</label>
                     <select value={newCategory} onChange={(e)=>setNewCategory(e.target.value as any)} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-xl outline-none border-2 border-transparent focus:border-cyan-500 font-bold dark:text-white appearance-none cursor-pointer">
                       {Object.values(IdeaCategory).map(c => <option key={c} value={c}>{t.categories[c]}</option>)}
                     </select>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Auteur</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t.authorLabel}</label>
                     <input type="text" placeholder={t.authorPlaceholder} value={newAuthor} onChange={(e)=>setNewAuthor(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-xl outline-none border-2 border-transparent focus:border-cyan-500 font-bold dark:text-white transition-all"/>
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Omschrijving</label>
+                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t.descLabel}</label>
                    <textarea placeholder={t.descPlaceholder} value={newDesc} onChange={(e)=>setNewDesc(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-xl h-32 md:h-40 resize-none outline-none border-2 border-transparent focus:border-cyan-500 font-bold dark:text-white transition-all" required></textarea>
                 </div>
                 <button type="submit" className="w-full bg-cyan-600 text-white py-5 rounded-[1.8rem] font-black shadow-xl shadow-cyan-600/20 hover:scale-[1.02] transition-transform active:scale-95 uppercase tracking-[0.2em] text-[10px]">

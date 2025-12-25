@@ -1,19 +1,21 @@
 
 import React, { useState } from 'react';
-import { ThumbsUp, ThumbsDown, Clock, Tag, Trash2, ShieldCheck, Check, X as XIcon } from 'lucide-react';
-import { Idea } from '../types';
+import { ThumbsUp, ThumbsDown, Clock, Tag, Trash2, ShieldCheck, Check, X as XIcon, Share2 } from 'lucide-react';
+import { Idea, LanguageContent } from '../types';
 
 interface IdeaCardProps {
   idea: Idea;
   onLike: (id: string) => void;
   onDislike: (id: string) => void;
   onDelete?: (id: string) => void;
+  onShare?: (idea: Idea) => void;
   onClick?: () => void;
   isSelected?: boolean;
   isAdmin?: boolean;
+  t: LanguageContent;
 }
 
-const IdeaCard: React.FC<IdeaCardProps> = ({ idea, onLike, onDislike, onDelete, onClick, isSelected, isAdmin }) => {
+const IdeaCard: React.FC<IdeaCardProps> = ({ idea, onLike, onDislike, onDelete, onShare, onClick, isSelected, isAdmin, t }) => {
   const [isConfirming, setIsConfirming] = useState(false);
 
   const categoryColors: Record<string, string> = {
@@ -47,51 +49,62 @@ const IdeaCard: React.FC<IdeaCardProps> = ({ idea, onLike, onDislike, onDelete, 
   return (
     <div 
       onClick={onClick}
+      role="button"
+      tabIndex={0}
+      aria-pressed={isSelected}
       className={`group relative w-full text-left bg-white dark:bg-slate-900 border-s-[6px] ${colorClass.split(' ')[0]} p-6 rounded-e-2xl shadow-lg transition-all cursor-pointer hover:-translate-y-1 hover:shadow-2xl
         ${isSelected ? 'ring-2 ring-cyan-500 dark:ring-cyan-400 bg-cyan-50/10 dark:bg-cyan-900/10' : ''}
       `}
+      onKeyDown={(e) => { if(e.key === 'Enter') onClick?.(); }}
     >
-      {isAdmin && (
-        <div className="absolute top-4 right-16 z-20">
-          {!isConfirming ? (
-            <button 
-              onClick={handleDeleteClick}
-              className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all"
-              title="Verwijder idee"
-            >
-              <Trash2 size={18} />
-            </button>
-          ) : (
-            <div className="flex items-center gap-2 animate-slide-up bg-rose-600 p-1.5 rounded-xl shadow-2xl shadow-rose-600/40">
-              <span className="text-[8px] font-black text-white uppercase px-2">Zeker?</span>
+      <div className="absolute top-4 right-4 flex items-center gap-1 z-20">
+        <button 
+          onClick={(e) => { e.stopPropagation(); onShare?.(idea); }}
+          className="p-2 text-slate-300 hover:text-cyan-500 hover:bg-cyan-500/10 rounded-lg transition-all"
+          title="Share"
+        >
+          <Share2 size={16} />
+        </button>
+
+        {isAdmin && (
+          <>
+            {!isConfirming ? (
               <button 
-                onClick={confirmDelete}
-                className="p-1.5 bg-white/20 hover:bg-white/40 text-white rounded-lg transition-colors"
-                title="Ja, verwijder"
+                onClick={handleDeleteClick}
+                className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all"
+                title={t.delete}
               >
-                <Check size={14} />
+                <Trash2 size={16} />
               </button>
-              <button 
-                onClick={cancelDelete}
-                className="p-1.5 bg-black/20 hover:bg-black/40 text-white rounded-lg transition-colors"
-                title="Nee, behoud"
-              >
-                <XIcon size={14} />
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+            ) : (
+              <div className="flex items-center gap-2 animate-slide-up bg-rose-600 p-1 rounded-xl shadow-lg">
+                <button 
+                  onClick={confirmDelete}
+                  className="p-1.5 bg-white/20 hover:bg-white/40 text-white rounded-lg transition-colors"
+                >
+                  <Check size={14} />
+                </button>
+                <button 
+                  onClick={cancelDelete}
+                  className="p-1.5 bg-black/20 hover:bg-black/40 text-white rounded-lg transition-colors"
+                >
+                  <XIcon size={14} />
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       <div className="flex justify-between items-start mb-4">
         <div className="flex-grow">
            <div className="flex items-center space-x-2">
              <Tag size={12} className={colorClass.split(' ')[1]} />
              <span className={`text-[9px] font-black uppercase tracking-widest ${colorClass.split(' ')[1]}`}>
-               {idea.category}
+               {t.categories[idea.category]}
              </span>
            </div>
-           <h3 className="text-xl font-black mt-2 dark:text-white leading-tight">
+           <h3 className="text-xl font-black mt-2 dark:text-white leading-tight pr-12">
              {idea.title}
            </h3>
         </div>
@@ -113,7 +126,7 @@ const IdeaCard: React.FC<IdeaCardProps> = ({ idea, onLike, onDislike, onDelete, 
         </div>
       </div>
       
-      <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-6 font-medium">
+      <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-6 font-medium line-clamp-3">
         {idea.description}
       </p>
 
@@ -121,7 +134,7 @@ const IdeaCard: React.FC<IdeaCardProps> = ({ idea, onLike, onDislike, onDelete, 
         <div className="mb-6 p-4 rounded-xl bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 animate-fade-in">
           <div className="flex items-center gap-2 mb-1">
             <ShieldCheck size={14} className="text-rose-500" />
-            <span className="text-[9px] font-black uppercase tracking-widest text-rose-500">Reactie van DigiHart</span>
+            <span className="text-[9px] font-black uppercase tracking-widest text-rose-500">{t.adminReply}</span>
           </div>
           <p className="text-xs text-slate-600 dark:text-rose-200/70 font-bold italic leading-relaxed">
             "{idea.adminResponse}"

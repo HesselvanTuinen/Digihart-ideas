@@ -4,7 +4,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>DigiHart.nl - Holographic Idea Platform</title>
+    <title>DigiHart.nl - Innovatie Platform</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -18,11 +18,22 @@
             animation: {
               'fade-in': 'fadeIn 0.5s ease-out',
               'slide-up': 'slideUp 0.4s ease-out',
-              'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              'pulse-slow': 'pulse 6s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              'float': 'float 8s ease-in-out infinite',
+              'mesh': 'mesh 15s ease infinite',
             },
             keyframes: {
               fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
               slideUp: { '0%': { transform: 'translateY(20px)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } },
+              float: {
+                '0%, 100%': { transform: 'translateY(0px) rotateX(5deg)' },
+                '50%': { transform: 'translateY(-20px) rotateX(10deg)' },
+              },
+              mesh: {
+                '0%': { 'background-position': '0% 50%' },
+                '50%': { 'background-position': '100% 50%' },
+                '100%': { 'background-position': '0% 50%' },
+              }
             }
           }
         }
@@ -35,35 +46,41 @@
       body {
         font-family: 'Inter', sans-serif;
         -webkit-tap-highlight-color: transparent;
+        overflow-x: hidden;
       }
-      .neon-text-blue { text-shadow: 0 0 8px rgba(14, 165, 233, 0.5), 0 0 15px rgba(14, 165, 233, 0.3); }
+      .neon-text-blue { text-shadow: 0 0 10px rgba(14, 165, 233, 0.4), 0 0 20px rgba(14, 165, 233, 0.2); }
       .hologram-container { perspective: 1200px; }
-      .hologram-element { transform-style: preserve-3d; animation: float 8s ease-in-out infinite; }
-      @keyframes float {
-        0%, 100% { transform: translateY(0px) rotateX(5deg); }
-        50% { transform: translateY(-15px) rotateX(10deg); }
-      }
-      .contrast-high { filter: contrast(1.3) saturate(1.2); font-weight: 500; }
+      
+      .contrast-high { filter: contrast(1.3) saturate(1.1); font-weight: 500; }
       .contrast-high * { border-width: 2px !important; }
       
       .glass { 
-        background: rgba(255, 255, 255, 0.7); 
-        backdrop-filter: blur(12px); 
-        -webkit-backdrop-filter: blur(12px);
+        background: rgba(255, 255, 255, 0.6); 
+        backdrop-filter: blur(16px); 
+        -webkit-backdrop-filter: blur(16px);
         border: 1px solid rgba(255, 255, 255, 0.2); 
       }
       .dark .glass { 
-        background: rgba(15, 23, 42, 0.7); 
-        border: 1px solid rgba(255, 255, 255, 0.05); 
+        background: rgba(15, 23, 42, 0.6); 
+        border: 1px solid rgba(255, 255, 255, 0.08); 
       }
 
-      /* Custom Scrollbar */
-      ::-webkit-scrollbar { width: 6px; height: 6px; }
+      .mesh-gradient {
+        background: linear-gradient(-45deg, #0f172a, #1e1b4b, #312e81, #1e293b);
+        background-size: 400% 400%;
+      }
+
+      /* Focus states for accessibility */
+      button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+        outline: 2px solid #0ea5e9;
+        outline-offset: 2px;
+      }
+
+      ::-webkit-scrollbar { width: 8px; }
       ::-webkit-scrollbar-track { background: transparent; }
       ::-webkit-scrollbar-thumb { background: rgba(14, 165, 233, 0.2); border-radius: 10px; }
-      ::-webkit-scrollbar-thumb:hover { background: rgba(14, 165, 233, 0.4); }
-
-      /* Mobile Safe Areas */
+      ::-webkit-scrollbar-thumb:hover { background: rgba(14, 165, 233, 0.5); }
+      
       .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
     </style>
     <script type="importmap">

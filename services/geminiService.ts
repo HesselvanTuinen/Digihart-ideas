@@ -8,10 +8,8 @@ export const generateBrainstormIdeas = async (
   language: string = 'Dutch'
 ): Promise<string> => {
   try {
-    const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : undefined;
-    if (!apiKey) return "Fout: Geen API-sleutel gevonden.";
-
-    const ai = new GoogleGenAI({ apiKey });
+    // Direct access to process.env.API_KEY as per guidelines
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const prompt = `Je bent een innovatie consultant voor DigiHart.nl. 
     Brainstorm 3 creatieve ideeën over het onderwerp: "${topic}" in de categorie: "${category}". 
@@ -38,10 +36,8 @@ export const generateStructuredIdeas = async (
   language: string = 'Dutch'
 ): Promise<Partial<Idea>[]> => {
   try {
-    const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : undefined;
-    if (!apiKey) return [];
-
-    const ai = new GoogleGenAI({ apiKey });
+    // Direct access to process.env.API_KEY as per guidelines
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const prompt = `Genereer 3 unieke, innovatieve ideeën over: "${topic}". 
     Zorg dat ze divers zijn en passen binnen de categorieën: ${Object.values(IdeaCategory).join(', ')}.
@@ -87,10 +83,8 @@ export const suggestAdminReply = async (
   language: string = 'Dutch'
 ): Promise<string> => {
   try {
-    const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : undefined;
-    if (!apiKey) return "";
-
-    const ai = new GoogleGenAI({ apiKey });
+    // Direct access to process.env.API_KEY as per guidelines
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const prompt = `Als beheerder van DigiHart.nl, schrijf een korte, bemoedigende en professionele reactie op dit idee:
     Titel: ${idea.title}
@@ -100,7 +94,8 @@ export const suggestAdminReply = async (
     De reactie moet in het ${language} zijn en maximaal 2 zinnen lang.`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-lite-latest',
+      // Fixed model name to gemini-flash-lite-latest per guidelines
+      model: 'gemini-flash-lite-latest',
       contents: prompt,
       config: {
         systemInstruction: "Je bent een vriendelijke en constructieve moderator voor DigiHart.nl.",
