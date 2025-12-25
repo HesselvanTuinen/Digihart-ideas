@@ -20,7 +20,10 @@ const HologramHeader: React.FC = () => {
                     <h1 className="font-display text-6xl font-black text-transparent bg-clip-text bg-gradient-to-br from-cyan-400 via-purple-500 to-pink-500 neon-text-blue tracking-tighter">
                         DigiHart.nl
                     </h1>
-                    <p className="mt-2 text-cyan-700 dark:text-cyan-300/60 text-[10px] font-mono tracking-[0.3em] uppercase">
+                    <p className="mt-2 text-cyan-700 dark:text-cyan-300/80 text-[12px] font-black tracking-widest uppercase">
+                        Deel je idee en kom in gesprek!
+                    </p>
+                    <p className="mt-1 text-slate-400 text-[8px] font-mono tracking-[0.4em] uppercase opacity-50">
                         Neural Innovation Network // Ver. 2.5
                     </p>
                 </div>

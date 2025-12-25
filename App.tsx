@@ -12,6 +12,8 @@ import {
   Shield, Key, LogOut, Trash2, Send, Wand2, Loader2, Check, ArrowRight, Share2, Info, Link as LinkIcon, Linkedin, Facebook, Twitter
 } from 'lucide-react';
 
+const LOCAL_STORAGE_KEY = 'digihart_ideas_v1';
+
 const App: React.FC = () => {
   // --- States ---
   const [ideas, setIdeas] = useState<Idea[]>([]);
@@ -68,18 +70,40 @@ const App: React.FC = () => {
     setTimeout(() => setToast(null), 4000);
   };
 
-  // --- Initial Setup ---
+  // --- Initial Setup & Persistence ---
   useEffect(() => {
     const savedTheme = localStorage.getItem('digihart-theme') as 'dark' | 'light' || 'dark';
     setTheme(savedTheme);
     
-    const initial: Idea[] = [
-      { id: '1', title: 'Smart Energy Tiles', description: 'Stoeptegels die energie opwekken wanneer mensen eroverheen lopen.', category: IdeaCategory.SUSTAINABILITY, likes: 45, dislikes: 2, createdAt: new Date(Date.now() - 100000000), author: 'Thomas', adminResponse: 'Geweldig idee! We kijken of we een pilot kunnen starten op de Grote Markt.' },
-      { id: '2', title: 'VR Inclusion Training', description: 'Empathie training via VR om diversiteit op de werkvloer te vergroten.', category: IdeaCategory.INCLUSION, likes: 89, dislikes: 1, createdAt: new Date(Date.now() - 50000000), author: 'Elena' },
-      { id: '3', title: 'AI Health Tutor', description: 'Gepersonaliseerde AI assistent voor chronisch zieken.', category: IdeaCategory.HEALTH, likes: 32, dislikes: 12, createdAt: new Date(), author: 'Marcus' }
-    ];
-    setIdeas(initial);
+    // Load ideas from localStorage
+    const savedIdeas = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (savedIdeas) {
+      try {
+        const parsed = JSON.parse(savedIdeas);
+        // Revive dates
+        const revived = parsed.map((i: any) => ({ ...i, createdAt: new Date(i.createdAt) }));
+        setIdeas(revived);
+      } catch (e) {
+        console.error("Failed to parse saved ideas", e);
+      }
+    } else {
+      // Default initial data
+      const initial: Idea[] = [
+        { id: '1', title: 'Smart Energy Tiles', description: 'Stoeptegels die energie opwekken wanneer mensen eroverheen lopen.', category: IdeaCategory.SUSTAINABILITY, likes: 45, dislikes: 2, createdAt: new Date(Date.now() - 100000000), author: 'Thomas', adminResponse: 'Geweldig idee! We kijken of we een pilot kunnen starten op de Grote Markt.' },
+        { id: '2', title: 'VR Inclusion Training', description: 'Empathie training via VR om diversiteit op de werkvloer te vergroten.', category: IdeaCategory.INCLUSION, likes: 89, dislikes: 1, createdAt: new Date(Date.now() - 50000000), author: 'Elena' },
+        { id: '3', title: 'AI Health Tutor', description: 'Gepersonaliseerde AI assistent voor chronisch zieken.', category: IdeaCategory.HEALTH, likes: 32, dislikes: 12, createdAt: new Date(), author: 'Marcus' }
+      ];
+      setIdeas(initial);
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(initial));
+    }
   }, []);
+
+  // Sync ideas to localStorage whenever they change
+  useEffect(() => {
+    if (ideas.length > 0) {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(ideas));
+    }
+  }, [ideas]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -151,7 +175,7 @@ const App: React.FC = () => {
     setSuggestingReplyId(idea.id);
     try {
       const languageMap: Record<SupportedLanguage, string> = {
-        nl: 'Dutch', en: 'English', es: 'Spanish', de: 'German', ar: 'Arabic'
+        nl: 'Dutch', en: 'English', es: 'Spanish', de: 'German', ar: 'Arabic', zh: 'Chinese', uk: 'Ukrainian', fy: 'Frisian', fr: 'French'
       };
       const suggestion = await suggestAdminReply(idea, languageMap[language]);
       if (suggestion) {
@@ -264,7 +288,7 @@ const App: React.FC = () => {
     setAiStructuredResults([]);
     try {
       const languageMap: Record<SupportedLanguage, string> = {
-        nl: 'Dutch', en: 'English', es: 'Spanish', de: 'German', ar: 'Arabic'
+        nl: 'Dutch', en: 'English', es: 'Spanish', de: 'German', ar: 'Arabic', zh: 'Chinese', uk: 'Ukrainian', fy: 'Frisian', fr: 'French'
       };
       const results = await generateStructuredIdeas(aiTopic, languageMap[language]);
       setAiStructuredResults(results);
@@ -352,12 +376,14 @@ const App: React.FC = () => {
                 
                 <div className="relative group">
                    <button className="flex items-center space-x-1 p-2 text-slate-400 hover:text-cyan-500 transition-colors"><Languages size={18}/></button>
-                   <div className="absolute right-0 mt-2 w-32 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 overflow-hidden">
-                      {Object.keys(DICTIONARY).map(lang => (
-                        <button key={lang} onClick={() => setLanguage(lang as SupportedLanguage)} className={`w-full text-left px-4 py-2 text-[10px] font-black uppercase hover:bg-slate-50 dark:hover:bg-slate-800 ${language === lang ? 'text-cyan-500' : 'text-slate-500'}`}>
-                          {lang}
-                        </button>
-                      ))}
+                   <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 overflow-hidden">
+                      <div className="grid grid-cols-1 divide-y dark:divide-slate-800">
+                        {Object.keys(DICTIONARY).map(lang => (
+                          <button key={lang} onClick={() => setLanguage(lang as SupportedLanguage)} className={`w-full text-left px-4 py-2 text-[10px] font-black uppercase hover:bg-slate-50 dark:hover:bg-slate-800 ${language === lang ? 'text-cyan-500' : 'text-slate-500'}`}>
+                            {lang === 'nl' ? 'Nederlands' : lang === 'en' ? 'English' : lang === 'es' ? 'Español' : lang === 'de' ? 'Deutsch' : lang === 'ar' ? 'العربية' : lang === 'zh' ? '中文' : lang === 'uk' ? 'Українська' : lang === 'fy' ? 'Frysk' : lang === 'fr' ? 'Français' : lang}
+                          </button>
+                        ))}
+                      </div>
                    </div>
                 </div>
 
