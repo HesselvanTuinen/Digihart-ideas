@@ -53,6 +53,7 @@ export interface LanguageContent {
   sortBy: string;
   newest: string;
   mostLoved: string;
+  bookmarks: string;
   selectIdeaPrompt: string;
   adminOverview: string;
   adminSub: string;
@@ -75,6 +76,7 @@ export interface LanguageContent {
   shareTitle: string;
   copyLink: string;
   linkCopied: string;
+  draftSaved: string;
   categories: Record<IdeaCategory, string>;
 }
 
@@ -109,6 +111,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     sortBy: "Sorteer op:",
     newest: "Nieuwste",
     mostLoved: "Meest Geliefd",
+    bookmarks: "Opgeslagen",
     selectIdeaPrompt: "Selecteer een idee voor details",
     adminOverview: "Beheer Overzicht",
     adminSub: "Systeembeheer & Moderatie",
@@ -131,6 +134,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     shareTitle: "Deel op Social Media",
     copyLink: "Kopieer Link",
     linkCopied: "Link gekopieerd!",
+    draftSaved: "Concept automatisch opgeslagen",
     categories: {
       [IdeaCategory.TECHNOLOGY]: "Technologie",
       [IdeaCategory.COMMUNITY]: "Gemeenschap",
@@ -171,6 +175,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     sortBy: "Sort by:",
     newest: "Newest",
     mostLoved: "Most Loved",
+    bookmarks: "Saved",
     selectIdeaPrompt: "Select an idea to view details",
     adminOverview: "Admin Overview",
     adminSub: "System Management & Moderation",
@@ -193,6 +198,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     shareTitle: "Share on Social Media",
     copyLink: "Copy Link",
     linkCopied: "Link copied!",
+    draftSaved: "Draft auto-saved",
     categories: {
       [IdeaCategory.TECHNOLOGY]: "Technology",
       [IdeaCategory.COMMUNITY]: "Community",
@@ -233,6 +239,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     sortBy: "Ordenar por:",
     newest: "Más nuevos",
     mostLoved: "Más amados",
+    bookmarks: "Guardado",
     selectIdeaPrompt: "Selecciona una idea para ver detalles",
     adminOverview: "Resumen de Admin",
     adminSub: "Gestión y Moderación del Sistema",
@@ -255,6 +262,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     shareTitle: "Compartir en Redes Sociales",
     copyLink: "Copiar Enlace",
     linkCopied: "¡Enlace copiado!",
+    draftSaved: "Borrador guardado",
     categories: {
       [IdeaCategory.TECHNOLOGY]: "Tecnología",
       [IdeaCategory.COMMUNITY]: "Comunidad",
@@ -295,6 +303,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     sortBy: "Sortieren nach:",
     newest: "Neueste",
     mostLoved: "Beliebteste",
+    bookmarks: "Gespeichert",
     selectIdeaPrompt: "Wähle eine Idee für Details",
     adminOverview: "Admin-Übersicht",
     adminSub: "Systemverwaltung & Moderation",
@@ -317,6 +326,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     shareTitle: "Auf Social Media teilen",
     copyLink: "Link kopieren",
     linkCopied: "Link kopiert!",
+    draftSaved: "Entwurf gespeichert",
     categories: {
       [IdeaCategory.TECHNOLOGY]: "Technologie",
       [IdeaCategory.COMMUNITY]: "Gemeinschaft",
@@ -357,6 +367,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     sortBy: "ترتيب حسب:",
     newest: "الأحدث",
     mostLoved: "الأكثر إعجاباً",
+    bookmarks: "محفوظ",
     selectIdeaPrompt: "اختر فكرة لعرض التفاصيل",
     adminOverview: "نظرة عامة على الإدارة",
     adminSub: "إدارة النظام والاعتدال",
@@ -379,6 +390,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     shareTitle: "مشاركة على التواصل الاجتماعي",
     copyLink: "نسخ الرابط",
     linkCopied: "تم نسخ الرابط!",
+    draftSaved: "تم حفظ المسودة",
     categories: {
       [IdeaCategory.TECHNOLOGY]: "تكنولوجيا",
       [IdeaCategory.COMMUNITY]: "مجتمع",
@@ -419,6 +431,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     sortBy: "排序方式:",
     newest: "最新",
     mostLoved: "最受欢迎",
+    bookmarks: "已收藏",
     selectIdeaPrompt: "选择一个想法查看详情",
     adminOverview: "管理员概览",
     adminSub: "系统管理与审核",
@@ -441,6 +454,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     shareTitle: "分享到社交媒体",
     copyLink: "复制链接",
     linkCopied: "链接已复制！",
+    draftSaved: "草稿已保存",
     categories: {
       [IdeaCategory.TECHNOLOGY]: "技术",
       [IdeaCategory.COMMUNITY]: "社区",
@@ -481,6 +495,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     sortBy: "Сортувати за:",
     newest: "Найновіші",
     mostLoved: "Найулюбленіші",
+    bookmarks: "Збережено",
     selectIdeaPrompt: "Виберіть ідею для перегляду деталей",
     adminOverview: "Огляд адмін-панелі",
     adminSub: "Управління системою та модерація",
@@ -503,6 +518,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     shareTitle: "Поділитися у соцмережах",
     copyLink: "Копіювати посилання",
     linkCopied: "Посилання скопійовано!",
+    draftSaved: "Чернетку збережено",
     categories: {
       [IdeaCategory.TECHNOLOGY]: "Технології",
       [IdeaCategory.COMMUNITY]: "Спільнота",
@@ -543,6 +559,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     sortBy: "Sortearje op:",
     newest: "Nijste",
     mostLoved: "Meast Leafst",
+    bookmarks: "Bewarre",
     selectIdeaPrompt: "Selektearje in idee foar details",
     adminOverview: "Behear Oersjoch",
     adminSub: "Systeembehear & Moderaasje",
@@ -565,6 +582,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     shareTitle: "Diel op Sosjale Media",
     copyLink: "Kopiearje Link",
     linkCopied: "Link kopiearre!",
+    draftSaved: "Konsept bewarre",
     categories: {
       [IdeaCategory.TECHNOLOGY]: "Technology",
       [IdeaCategory.COMMUNITY]: "Mienskip",
@@ -605,6 +623,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     sortBy: "Trier par :",
     newest: "Plus récent",
     mostLoved: "Plus aimé",
+    bookmarks: "Enregistré",
     selectIdeaPrompt: "Sélectionnez une idée pour voir les détails",
     adminOverview: "Aperçu Admin",
     adminSub: "Gestion du système & modération",
@@ -627,6 +646,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     shareTitle: "Partager sur les réseaux sociaux",
     copyLink: "Copier le lien",
     linkCopied: "Lien copié !",
+    draftSaved: "Brouillon enregistré",
     categories: {
       [IdeaCategory.TECHNOLOGY]: "Technologie",
       [IdeaCategory.COMMUNITY]: "Communauté",

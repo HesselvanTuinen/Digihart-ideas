@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import HologramHeader from './components/HologramHeader';
 import Dashboard from './components/Dashboard';
 import IdeaCard from './components/IdeaCard';
@@ -8,15 +8,18 @@ import { suggestAdminReply, generateStructuredIdeas } from './services/geminiSer
 import { GoogleGenAI } from "@google/genai";
 import { 
   Plus, Search, Sparkles, X, Sun, Moon, Type, LayoutGrid, 
-  BarChart3, Languages, Filter, AlertCircle, 
+  BarChart3, Languages, Filter, AlertCircle, Bookmark,
   Shield, Key, LogOut, Trash2, Send, Wand2, Loader2, Check, ArrowRight, Share2, Info, Link as LinkIcon, Linkedin, Facebook, Twitter
 } from 'lucide-react';
 
 const LOCAL_STORAGE_KEY = 'digihart_ideas_v2';
+const DRAFT_STORAGE_KEY = 'digihart_form_draft';
+const BOOKMARKS_STORAGE_KEY = 'digihart_bookmarks';
 
 const App: React.FC = () => {
   // --- States ---
   const [ideas, setIdeas] = useState<Idea[]>([]);
+  const [bookmarks, setBookmarks] = useState<string[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
   const [language, setLanguage] = useState<SupportedLanguage>('nl');
   const [searchTerm, setSearchTerm] = useState('');
@@ -24,7 +27,7 @@ const App: React.FC = () => {
   const [selectedIdeaId, setSelectedIdeaId] = useState<string | null>(null);
   const [highContrast, setHighContrast] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-  const [sortBy, setSortBy] = useState<'newest' | 'likes'>('newest');
+  const [sortBy, setSortBy] = useState<'newest' | 'likes' | 'saved'>('newest');
 
   // Admin States
   const [isAdmin, setIsAdmin] = useState(false);
@@ -46,6 +49,7 @@ const App: React.FC = () => {
   const [newCategory, setNewCategory] = useState<IdeaCategory>(IdeaCategory.TECHNOLOGY);
   const [newAuthor, setNewAuthor] = useState('');
   const [refiningIdea, setRefiningIdea] = useState(false);
+  const [lastDraftSave, setLastDraftSave] = useState<number | null>(null);
 
   // AI States
   const [aiTopic, setAiTopic] = useState('');
@@ -81,14 +85,12 @@ const App: React.FC = () => {
     if (savedIdeas) {
       try {
         const parsed = JSON.parse(savedIdeas);
-        // Revive dates
         const revived = parsed.map((i: any) => ({ ...i, createdAt: new Date(i.createdAt) }));
         setIdeas(revived);
       } catch (e) {
         console.error("Failed to parse saved ideas", e);
       }
     } else {
-      // Default initial data
       const initial: Idea[] = [
         { id: '1', title: 'Smart Energy Tiles', description: 'Stoeptegels die energie opwekken wanneer mensen eroverheen lopen.', category: IdeaCategory.SUSTAINABILITY, likes: 45, dislikes: 2, createdAt: new Date(Date.now() - 100000000), author: 'Thomas', adminResponse: 'Geweldig idee! We kijken of we een pilot kunnen starten op de Grote Markt.' },
         { id: '2', title: 'VR Inclusion Training', description: 'Empathie training via VR om diversiteit op de werkvloer te vergroten.', category: IdeaCategory.INCLUSION, likes: 89, dislikes: 1, createdAt: new Date(Date.now() - 50000000), author: 'Elena' },
@@ -96,15 +98,60 @@ const App: React.FC = () => {
       ];
       setIdeas(initial);
     }
+
+    // Load bookmarks
+    const savedBookmarks = localStorage.getItem(BOOKMARKS_STORAGE_KEY);
+    if (savedBookmarks) {
+      try {
+        setBookmarks(JSON.parse(savedBookmarks));
+      } catch (e) {
+        console.error("Failed to parse bookmarks", e);
+      }
+    }
+
+    // Load draft
+    const savedDraft = localStorage.getItem(DRAFT_STORAGE_KEY);
+    if (savedDraft) {
+      try {
+        const draft = JSON.parse(savedDraft);
+        setNewTitle(draft.title || '');
+        setNewDesc(draft.description || '');
+        setNewCategory(draft.category || IdeaCategory.TECHNOLOGY);
+        setNewAuthor(draft.author || '');
+      } catch (e) {}
+    }
+
     setIsInitialized(true);
   }, []);
 
-  // Sync ideas to localStorage whenever they change, but only after initialization
+  // Sync ideas
   useEffect(() => {
     if (isInitialized) {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(ideas));
     }
   }, [ideas, isInitialized]);
+
+  // Sync bookmarks
+  useEffect(() => {
+    if (isInitialized) {
+      localStorage.setItem(BOOKMARKS_STORAGE_KEY, JSON.stringify(bookmarks));
+    }
+  }, [bookmarks, isInitialized]);
+
+  // Sync draft (Debounced)
+  useEffect(() => {
+    if (!isInitialized) return;
+    const timeout = setTimeout(() => {
+      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({
+        title: newTitle,
+        description: newDesc,
+        category: newCategory,
+        author: newAuthor
+      }));
+      setLastDraftSave(Date.now());
+    }, 1000);
+    return () => clearTimeout(timeout);
+  }, [newTitle, newDesc, newCategory, newAuthor, isInitialized]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -118,13 +165,22 @@ const App: React.FC = () => {
   }, [language]);
 
   // --- Handlers ---
-  const handleLike = (id: string) => {
+  const handleLike = useCallback((id: string) => {
     setIdeas(prev => prev.map(i => i.id === id ? { ...i, likes: i.likes + 1 } : i));
-  };
+  }, []);
 
-  const handleDislike = (id: string) => {
+  const handleDislike = useCallback((id: string) => {
     setIdeas(prev => prev.map(i => i.id === id ? { ...i, dislikes: i.dislikes + 1 } : i));
-  };
+  }, []);
+
+  const toggleBookmark = useCallback((id: string) => {
+    setBookmarks(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(bid => bid !== id);
+      }
+      return [...prev, id];
+    });
+  }, []);
 
   const handleExport = () => {
     const headers = ['ID', 'Title', 'Description', 'Category', 'Author', 'Likes', 'Dislikes', 'Created At', 'Admin Response'];
@@ -192,23 +248,33 @@ const App: React.FC = () => {
     setRefiningIdea(true);
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const prompt = `Refine this idea for an innovation platform. Improve the title and description.
-      Title: ${newTitle}
-      Description: ${newDesc}
+      const prompt = `You are a world-class innovation storyteller. Enhance this idea to be more creative, descriptive, and compelling. 
+      Input Title: ${newTitle}
+      Input Description: ${newDesc}
       Category: ${newCategory}
-      Current Language: ${language}
-      Provide JSON with "title" and "description".`;
+      Target Language: ${language}
+      
+      Instructions:
+      1. Make the title punchy and evocative.
+      2. Expand the description with a focus on impact and 'wow-factor'.
+      3. Use vivid, sensory language.
+      
+      Provide ONLY valid JSON with keys "title" and "description".`;
       
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-3-pro-preview',
         contents: prompt,
-        config: { responseMimeType: 'application/json' }
+        config: { 
+          responseMimeType: 'application/json',
+          temperature: 0.9,
+          thinkingConfig: { thinkingBudget: 3000 } // Deep reasoning for refinement
+        }
       });
       
       const result = JSON.parse(response.text || '{}');
       if (result.title) setNewTitle(result.title);
       if (result.description) setNewDesc(result.description);
-      showToast(language === 'nl' ? "AI verbetering voltooid!" : "AI refinement complete!");
+      showToast(language === 'nl' ? "Idee creatief verrijkt!" : "Idea creatively enriched!");
     } catch (e) {
       showToast("AI Refinement error.", "error");
     } finally {
@@ -244,6 +310,7 @@ const App: React.FC = () => {
     setIdeas([idea, ...ideas]);
     setIsFormOpen(false);
     setNewTitle(''); setNewDesc(''); setNewAuthor('');
+    localStorage.removeItem(DRAFT_STORAGE_KEY);
     setActiveTab('ideas');
     setSelectedIdeaId(idea.id);
     showToast(language === 'nl' ? "Idee geplaatst!" : "Idea posted!");
@@ -256,14 +323,11 @@ const App: React.FC = () => {
 
   const handleSocialShare = (platform: 'twitter' | 'linkedin' | 'facebook' | 'copy') => {
     if (!sharingIdea) return;
-    
-    // Fixed URL construction to avoid duplicate query strings
     const baseUrl = window.location.origin + window.location.pathname;
     const shareUrlRaw = `${baseUrl}?ideaId=${sharingIdea.id}`;
     const text = encodeURIComponent(`Bekijk dit innovatieve idee op DigiHart.nl: "${sharingIdea.title}"\n`);
     
     let shareUrl = '';
-    
     switch(platform) {
       case 'twitter':
         shareUrl = `https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(shareUrlRaw)}`;
@@ -308,13 +372,18 @@ const App: React.FC = () => {
       i.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       i.category.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    if (sortBy === 'saved') {
+      result = result.filter(i => bookmarks.includes(i.id));
+    }
+
     if (sortBy === 'newest') {
       result = [...result].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    } else {
+    } else if (sortBy === 'likes') {
       result = [...result].sort((a, b) => b.likes - a.likes);
     }
     return result;
-  }, [ideas, searchTerm, sortBy]);
+  }, [ideas, searchTerm, sortBy, bookmarks]);
 
   const selectedIdea = ideas.find(i => i.id === selectedIdeaId);
 
@@ -419,14 +488,22 @@ const App: React.FC = () => {
                    <span>{t.sortBy}</span>
                    <button onClick={() => setSortBy('newest')} className={`px-3 py-1 rounded-full transition-all ${sortBy === 'newest' ? 'bg-cyan-500 text-white shadow-md' : 'hover:text-cyan-500'}`}>{t.newest}</button>
                    <button onClick={() => setSortBy('likes')} className={`px-3 py-1 rounded-full transition-all ${sortBy === 'likes' ? 'bg-cyan-500 text-white shadow-md' : 'hover:text-cyan-500'}`}>{t.mostLoved}</button>
+                   <button onClick={() => setSortBy('saved')} className={`px-3 py-1 rounded-full transition-all flex items-center gap-1 ${sortBy === 'saved' ? 'bg-cyan-500 text-white shadow-md' : 'hover:text-cyan-500'}`}><Bookmark size={10} /> {t.bookmarks}</button>
                 </div>
 
                 <div className="grid grid-cols-1 gap-5">
                   {filteredAndSortedIdeas.length > 0 ? filteredAndSortedIdeas.map(idea => (
                     <IdeaCard 
-                      key={idea.id} idea={idea} onLike={handleLike} onDislike={handleDislike} 
-                      onDelete={isAdmin ? handleDeleteIdea : undefined} onShare={handleShareClick}
-                      onClick={() => setSelectedIdeaId(idea.id)} isSelected={idea.id === selectedIdeaId} isAdmin={isAdmin} t={t}
+                      key={idea.id} idea={idea} 
+                      onLike={handleLike} 
+                      onDislike={handleDislike} 
+                      onBookmark={() => toggleBookmark(idea.id)}
+                      isBookmarked={bookmarks.includes(idea.id)}
+                      onDelete={isAdmin ? handleDeleteIdea : undefined} 
+                      onShare={handleShareClick}
+                      onClick={() => setSelectedIdeaId(idea.id)} 
+                      isSelected={idea.id === selectedIdeaId} 
+                      isAdmin={isAdmin} t={t}
                     />
                   )) : (
                     <div className="text-center py-20 bg-slate-100 dark:bg-slate-900 rounded-[2rem] border-2 border-dashed border-slate-200 dark:border-slate-800">
@@ -445,9 +522,14 @@ const App: React.FC = () => {
                       <div className="space-y-6 animate-fade-in relative z-10">
                         <div className="flex justify-between items-start">
                           <span className="text-[10px] font-black uppercase tracking-[0.3em] text-cyan-500">{t.categories[selectedIdea.category]}</span>
-                          <button onClick={() => handleShareClick(selectedIdea)} className="p-2 bg-cyan-500/10 text-cyan-500 rounded-xl hover:bg-cyan-500 hover:text-white transition-all">
-                            <Share2 size={16} />
-                          </button>
+                          <div className="flex gap-2">
+                             <button onClick={() => toggleBookmark(selectedIdea.id)} className={`p-2 rounded-xl transition-all ${bookmarks.includes(selectedIdea.id) ? 'bg-yellow-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-yellow-500'}`}>
+                               <Bookmark size={16} fill={bookmarks.includes(selectedIdea.id) ? "currentColor" : "none"} />
+                             </button>
+                             <button onClick={() => handleShareClick(selectedIdea)} className="p-2 bg-cyan-500/10 text-cyan-500 rounded-xl hover:bg-cyan-500 hover:text-white transition-all">
+                               <Share2 size={16} />
+                             </button>
+                          </div>
                         </div>
                         <h2 className="text-3xl md:text-4xl font-black dark:text-white leading-[1.1] tracking-tight">{selectedIdea.title}</h2>
                         <div className="bg-slate-50 dark:bg-slate-950/50 p-6 rounded-3xl border dark:border-slate-800">
@@ -685,7 +767,10 @@ const App: React.FC = () => {
           <div className="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-[2.5rem] md:rounded-[3rem] w-full max-w-xl max-h-[90vh] overflow-y-auto p-8 md:p-10 shadow-2xl relative">
              <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500"></div>
              <div className="flex justify-between items-center mb-8">
-               <h2 className="text-2xl md:text-3xl font-black dark:text-white tracking-tighter uppercase">{t.addIdea}</h2>
+               <div className="flex flex-col">
+                 <h2 className="text-2xl md:text-3xl font-black dark:text-white tracking-tighter uppercase">{t.addIdea}</h2>
+                 {lastDraftSave && <span className="text-[8px] font-black uppercase text-emerald-500 mt-1">{t.draftSaved}</span>}
+               </div>
                <button onClick={() => setIsFormOpen(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"><X size={24}/></button>
              </div>
              <form onSubmit={handleAddIdea} className="space-y-5">

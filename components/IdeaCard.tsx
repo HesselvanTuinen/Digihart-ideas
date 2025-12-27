@@ -1,12 +1,14 @@
 
 import React, { useState } from 'react';
-import { ThumbsUp, ThumbsDown, Clock, Tag, Trash2, ShieldCheck, Check, X as XIcon, Share2 } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, Clock, Tag, Trash2, ShieldCheck, Check, X as XIcon, Share2, Bookmark } from 'lucide-react';
 import { Idea, LanguageContent } from '../types';
 
 interface IdeaCardProps {
   idea: Idea;
   onLike: (id: string) => void;
   onDislike: (id: string) => void;
+  onBookmark?: (id: string) => void;
+  isBookmarked?: boolean;
   onDelete?: (id: string) => void;
   onShare?: (idea: Idea) => void;
   onClick?: () => void;
@@ -15,7 +17,7 @@ interface IdeaCardProps {
   t: LanguageContent;
 }
 
-const IdeaCard: React.FC<IdeaCardProps> = ({ idea, onLike, onDislike, onDelete, onShare, onClick, isSelected, isAdmin, t }) => {
+const IdeaCard: React.FC<IdeaCardProps> = ({ idea, onLike, onDislike, onBookmark, isBookmarked, onDelete, onShare, onClick, isSelected, isAdmin, t }) => {
   const [isConfirming, setIsConfirming] = useState(false);
 
   const categoryColors: Record<string, string> = {
@@ -52,12 +54,20 @@ const IdeaCard: React.FC<IdeaCardProps> = ({ idea, onLike, onDislike, onDelete, 
       role="button"
       tabIndex={0}
       aria-pressed={isSelected}
-      className={`group relative w-full text-left bg-white dark:bg-slate-900 border-s-[6px] ${colorClass.split(' ')[0]} p-6 rounded-e-2xl shadow-lg transition-all cursor-pointer hover:-translate-y-1 hover:shadow-2xl
+      className={`group relative w-full text-left bg-white dark:bg-slate-900 border-s-[6px] ${colorClass.split(' ')[0]} p-6 rounded-e-2xl shadow-lg transition-all duration-300 cursor-pointer hover:-translate-y-2 hover:scale-[1.02] hover:shadow-2xl hover:shadow-cyan-500/10
         ${isSelected ? 'ring-2 ring-cyan-500 dark:ring-cyan-400 bg-cyan-50/10 dark:bg-cyan-900/10' : ''}
       `}
       onKeyDown={(e) => { if(e.key === 'Enter') onClick?.(); }}
     >
       <div className="absolute top-4 right-4 flex items-center gap-1 z-20">
+        <button 
+          onClick={(e) => { e.stopPropagation(); onBookmark?.(idea.id); }}
+          className={`p-2 rounded-lg transition-all ${isBookmarked ? 'text-yellow-500 bg-yellow-500/10' : 'text-slate-300 hover:text-yellow-500 hover:bg-yellow-500/10'}`}
+          title="Save Idea"
+        >
+          <Bookmark size={16} fill={isBookmarked ? "currentColor" : "none"} />
+        </button>
+
         <button 
           onClick={(e) => { e.stopPropagation(); onShare?.(idea); }}
           className="p-2 text-slate-300 hover:text-cyan-500 hover:bg-cyan-500/10 rounded-lg transition-all"
@@ -104,7 +114,7 @@ const IdeaCard: React.FC<IdeaCardProps> = ({ idea, onLike, onDislike, onDelete, 
                {t.categories[idea.category]}
              </span>
            </div>
-           <h3 className="text-xl font-black mt-2 dark:text-white leading-tight pr-12">
+           <h3 className="text-xl font-black mt-2 dark:text-white leading-tight pr-12 transition-colors group-hover:text-cyan-500 dark:group-hover:text-cyan-400">
              {idea.title}
            </h3>
         </div>
@@ -144,10 +154,10 @@ const IdeaCard: React.FC<IdeaCardProps> = ({ idea, onLike, onDislike, onDelete, 
       
       <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 border-t dark:border-slate-800 pt-4">
           <div className="flex items-center space-x-2">
-              <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-cyan-500 to-purple-500 flex items-center justify-center text-white text-[8px] font-black uppercase">
+              <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-cyan-500 to-purple-500 flex items-center justify-center text-white text-[8px] font-black uppercase shadow-sm">
                 {idea.author.substring(0, 2).toUpperCase()}
               </div>
-              <span>{idea.author}</span>
+              <span className="group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">{idea.author}</span>
           </div>
           <div className="flex items-center space-x-1">
               <Clock size={12} />
