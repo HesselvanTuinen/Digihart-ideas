@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import HologramHeader from './components/HologramHeader';
 import Dashboard from './components/Dashboard';
 import IdeaCard from './components/IdeaCard';
@@ -9,12 +9,15 @@ import { GoogleGenAI } from "@google/genai";
 import { 
   Plus, Search, Sparkles, X, Sun, Moon, Type, LayoutGrid, 
   BarChart3, Languages, Filter, AlertCircle, Bookmark,
-  Shield, Key, LogOut, Trash2, Send, Wand2, Loader2, Check, ArrowRight, Share2, Info, Link as LinkIcon, Linkedin, Facebook, Twitter
+  Shield, Key, LogOut, Trash2, Send, Wand2, Loader2, Check, ArrowRight, Share2, Info, Link as LinkIcon, Linkedin, Facebook, Twitter, Save, Database, Mic
 } from 'lucide-react';
 
 const LOCAL_STORAGE_KEY = 'digihart_ideas_v2';
 const DRAFT_STORAGE_KEY = 'digihart_form_draft';
 const BOOKMARKS_STORAGE_KEY = 'digihart_bookmarks';
+
+// Type definition for browser speech recognition
+type SpeechRecognitionInstance = any;
 
 const App: React.FC = () => {
   // --- States ---
@@ -28,6 +31,7 @@ const App: React.FC = () => {
   const [highContrast, setHighContrast] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [sortBy, setSortBy] = useState<'newest' | 'likes' | 'saved'>('newest');
+  const [isSaving, setIsSaving] = useState(false);
 
   // Admin States
   const [isAdmin, setIsAdmin] = useState(false);
@@ -50,6 +54,10 @@ const App: React.FC = () => {
   const [newAuthor, setNewAuthor] = useState('');
   const [refiningIdea, setRefiningIdea] = useState(false);
   const [lastDraftSave, setLastDraftSave] = useState<number | null>(null);
+
+  // Voice States
+  const [isRecording, setIsRecording] = useState<'title' | 'description' | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionInstance>(null);
 
   // AI States
   const [aiTopic, setAiTopic] = useState('');
@@ -121,13 +129,57 @@ const App: React.FC = () => {
       } catch (e) {}
     }
 
+    // Initialize Speech Recognition
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = language === 'nl' ? 'nl-NL' : language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'en-US';
+      
+      recognition.onresult = (event: any) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          transcript += event.results[i][0].transcript;
+        }
+        
+        if (isRecording === 'title') {
+          setNewTitle(prev => prev + ' ' + transcript);
+        } else if (isRecording === 'description') {
+          setNewDesc(prev => prev + ' ' + transcript);
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        console.error('Speech Recognition Error', event.error);
+        setIsRecording(null);
+        showToast(t.voiceError, 'error');
+      };
+
+      recognition.onend = () => {
+        setIsRecording(null);
+      };
+
+      recognitionRef.current = recognition;
+    }
+
     setIsInitialized(true);
   }, []);
+
+  // Update voice language when global language changes
+  useEffect(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.lang = language === 'nl' ? 'nl-NL' : language === 'en' ? 'en-US' : 'en-US';
+    }
+  }, [language]);
 
   // Sync ideas
   useEffect(() => {
     if (isInitialized) {
+      setIsSaving(true);
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(ideas));
+      const timeout = setTimeout(() => setIsSaving(false), 800);
+      return () => clearTimeout(timeout);
     }
   }, [ideas, isInitialized]);
 
@@ -182,6 +234,25 @@ const App: React.FC = () => {
     });
   }, []);
 
+  const toggleVoiceRecording = (target: 'title' | 'description') => {
+    if (!recognitionRef.current) {
+      showToast(t.voiceNotSupported, 'error');
+      return;
+    }
+
+    if (isRecording === target) {
+      recognitionRef.current.stop();
+      setIsRecording(null);
+    } else {
+      if (isRecording) {
+        recognitionRef.current.stop();
+      }
+      setIsRecording(target);
+      recognitionRef.current.start();
+      showToast(t.voiceListen, 'info');
+    }
+  };
+
   const handleExport = () => {
     const headers = ['ID', 'Title', 'Description', 'Category', 'Author', 'Likes', 'Dislikes', 'Created At', 'Admin Response'];
     const csvContent = ideas.map(idea => [
@@ -206,6 +277,20 @@ const App: React.FC = () => {
     link.click();
     document.body.removeChild(link);
     showToast(language === 'nl' ? "Export gedownload!" : "Export downloaded!");
+  };
+
+  const handleExportJSON = () => {
+    const jsonContent = JSON.stringify(ideas, null, 2);
+    const blob = new Blob([jsonContent], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `digihart_backup_${new Date().toISOString().split('T')[0]}.json`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast(language === 'nl' ? "Data opgeslagen als JSON!" : "Data saved as JSON!");
   };
 
   const handleDeleteIdea = (id: string) => {
@@ -314,6 +399,21 @@ const App: React.FC = () => {
     setActiveTab('ideas');
     setSelectedIdeaId(idea.id);
     showToast(language === 'nl' ? "Idee geplaatst!" : "Idea posted!");
+  };
+
+  const handleQuickSave = (result: Partial<Idea>) => {
+    const idea: Idea = {
+      id: Math.random().toString(36).substr(2, 9),
+      title: result.title || 'AI Idea',
+      description: result.description || '',
+      category: (result.category as IdeaCategory) || IdeaCategory.TECHNOLOGY,
+      likes: 0,
+      dislikes: 0,
+      createdAt: new Date(),
+      author: 'Gemini AI'
+    };
+    setIdeas([idea, ...ideas]);
+    showToast(language === 'nl' ? "Idee direct opgeslagen!" : "Idea saved instantly!");
   };
 
   const handleShareClick = (idea: Idea) => {
@@ -433,6 +533,11 @@ const App: React.FC = () => {
              </div>
              
              <div className="flex items-center space-x-1 rtl:space-x-reverse">
+                {isSaving && (
+                  <div className="px-2 py-1 bg-cyan-500/10 text-cyan-500 text-[8px] font-black uppercase tracking-widest animate-pulse rounded-md flex items-center gap-1">
+                    <Database size={10} /> <span>Sync</span>
+                  </div>
+                )}
                 <button 
                   onClick={() => setHighContrast(!highContrast)} 
                   className={`p-2 rounded-lg transition-colors ${highContrast ? 'text-cyan-500 bg-cyan-500/10' : 'text-slate-400 hover:text-cyan-500'}`}
@@ -477,7 +582,7 @@ const App: React.FC = () => {
 
       <main className="container mx-auto px-4 py-8 md:py-12 flex-grow mb-24">
          {activeTab === 'dashboard' && (
-           <Dashboard ideas={ideas} content={t} onExport={handleExport} />
+           <Dashboard ideas={ideas} content={t} onExport={handleExport} onExportJSON={handleExportJSON} />
          )}
 
          {activeTab === 'ideas' && (
@@ -741,12 +846,17 @@ const App: React.FC = () => {
                             <h4 className="text-sm font-black dark:text-white leading-tight">{result.title}</h4>
                             <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-3 leading-relaxed">{result.description}</p>
                          </div>
-                         <button onClick={() => {
-                            setNewTitle(result.title || ''); setNewDesc(result.description || ''); setNewCategory(result.category as IdeaCategory);
-                            setIsAIOpen(false); setIsFormOpen(true);
-                         }} className="mt-6 w-full py-3 bg-white dark:bg-slate-700 dark:text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-md hover:bg-pink-500 hover:text-white transition-all group-hover:scale-[1.02]">
-                            {t.adoptAI}
-                         </button>
+                         <div className="mt-6 flex flex-col gap-2">
+                            <button onClick={() => {
+                                setNewTitle(result.title || ''); setNewDesc(result.description || ''); setNewCategory(result.category as IdeaCategory);
+                                setIsAIOpen(false); setIsFormOpen(true);
+                            }} className="w-full py-3 bg-white dark:bg-slate-700 dark:text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-md hover:bg-pink-500 hover:text-white transition-all group-hover:scale-[1.02]">
+                                {t.adoptAI}
+                            </button>
+                            <button onClick={() => handleQuickSave(result)} className="w-full py-3 bg-pink-500/10 text-pink-500 rounded-xl text-[8px] font-black uppercase tracking-widest border border-pink-500/20 hover:bg-pink-500 hover:text-white transition-all flex items-center justify-center gap-2">
+                                <Save size={12} /> {t.quickSave}
+                            </button>
+                         </div>
                        </div>
                      ))}
                    </div>
@@ -776,10 +886,18 @@ const App: React.FC = () => {
              <form onSubmit={handleAddIdea} className="space-y-5">
                 <div className="space-y-1.5">
                    <div className="flex justify-between items-center">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t.titleLabel}</label>
-                      <button type="button" onClick={handleRefineIdea} disabled={!newTitle || refiningIdea || isApiKeyMissing} className="flex items-center gap-1.5 text-[8px] font-black text-purple-500 uppercase hover:text-purple-400 disabled:opacity-30 transition-all">
-                         {refiningIdea ? <Loader2 size={10} className="animate-spin"/> : <Sparkles size={10}/>} {t.refineAI}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t.titleLabel}</label>
+                        {isRecording === 'title' && <span className="text-[8px] font-black text-rose-500 animate-pulse uppercase">{t.voiceListen}</span>}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button type="button" onClick={() => toggleVoiceRecording('title')} className={`p-1.5 rounded-lg transition-all ${isRecording === 'title' ? 'bg-rose-500 text-white animate-pulse' : 'text-slate-400 hover:text-cyan-500 bg-slate-100 dark:bg-slate-800'}`}>
+                           <Mic size={14}/>
+                        </button>
+                        <button type="button" onClick={handleRefineIdea} disabled={!newTitle || refiningIdea || isApiKeyMissing} className="flex items-center gap-1.5 text-[8px] font-black text-purple-500 uppercase hover:text-purple-400 disabled:opacity-30 transition-all">
+                           {refiningIdea ? <Loader2 size={10} className="animate-spin"/> : <Sparkles size={10}/>} {t.refineAI}
+                        </button>
+                      </div>
                    </div>
                    <input type="text" placeholder={t.titlePlaceholder} value={newTitle} onChange={(e)=>setNewTitle(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-xl outline-none border-2 border-transparent focus:border-cyan-500 font-bold dark:text-white transition-all" required/>
                 </div>
@@ -796,7 +914,15 @@ const App: React.FC = () => {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t.descLabel}</label>
+                   <div className="flex justify-between items-center mb-1">
+                      <div className="flex items-center gap-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t.descLabel}</label>
+                        {isRecording === 'description' && <span className="text-[8px] font-black text-rose-500 animate-pulse uppercase">{t.voiceListen}</span>}
+                      </div>
+                      <button type="button" onClick={() => toggleVoiceRecording('description')} className={`p-1.5 rounded-lg transition-all ${isRecording === 'description' ? 'bg-rose-500 text-white animate-pulse' : 'text-slate-400 hover:text-cyan-500 bg-slate-100 dark:bg-slate-800'}`}>
+                         <Mic size={14}/>
+                      </button>
+                   </div>
                    <textarea placeholder={t.descPlaceholder} value={newDesc} onChange={(e)=>setNewDesc(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-xl h-32 md:h-40 resize-none outline-none border-2 border-transparent focus:border-cyan-500 font-bold dark:text-white transition-all" required></textarea>
                 </div>
                 <button type="submit" className="w-full bg-cyan-600 text-white py-5 rounded-[1.8rem] font-black shadow-xl shadow-cyan-600/20 hover:scale-[1.02] transition-transform active:scale-95 uppercase tracking-[0.2em] text-[10px]">

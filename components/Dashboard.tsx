@@ -2,15 +2,16 @@
 import React, { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, AreaChart, Area, CartesianGrid } from 'recharts';
 import { Idea, IdeaCategory, LanguageContent } from '../types';
-import { Download, TrendingUp, Lightbulb, PieChart as PieIcon, Activity, ListChecks } from 'lucide-react';
+import { Download, TrendingUp, Lightbulb, PieChart as PieIcon, Activity, ListChecks, FileJson } from 'lucide-react';
 
 interface DashboardProps {
   ideas: Idea[];
   content: LanguageContent;
   onExport: () => void;
+  onExportJSON: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ ideas, content, onExport }) => {
+const Dashboard: React.FC<DashboardProps> = ({ ideas, content, onExport, onExportJSON }) => {
   const COLORS = ['#0ea5e9', '#10b981', '#f59e0b', '#ec4899', '#ef4444', '#8b5cf6', '#d946ef'];
 
   const stats = useMemo(() => {
@@ -65,10 +66,16 @@ const Dashboard: React.FC<DashboardProps> = ({ ideas, content, onExport }) => {
           <h2 className="text-3xl md:text-5xl font-black dark:text-white tracking-tighter uppercase leading-none">{content.dashboard}</h2>
           <p className="text-slate-500 text-[10px] md:text-sm font-bold tracking-widest uppercase mt-2 opacity-60">Deep Insight Metrics & Visualizations</p>
         </div>
-        <button onClick={onExport} className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-gradient-to-r from-cyan-600 to-blue-700 text-white px-8 py-4 rounded-2xl shadow-xl shadow-cyan-600/20 text-xs font-black uppercase tracking-widest hover:scale-105 transition-all active:scale-95">
-          <Download size={14} />
-          <span>{content.export}</span>
-        </button>
+        <div className="flex flex-wrap gap-3 w-full sm:w-auto">
+          <button onClick={onExportJSON} className="flex-1 sm:flex-none flex items-center justify-center space-x-2 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-white px-6 py-4 rounded-2xl shadow-xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-all active:scale-95">
+            <FileJson size={14} />
+            <span>{content.exportJSON}</span>
+          </button>
+          <button onClick={onExport} className="flex-1 sm:flex-none flex items-center justify-center space-x-2 bg-gradient-to-r from-cyan-600 to-blue-700 text-white px-8 py-4 rounded-2xl shadow-xl shadow-cyan-600/20 text-xs font-black uppercase tracking-widest hover:scale-105 transition-all active:scale-95">
+            <Download size={14} />
+            <span>{content.export}</span>
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">

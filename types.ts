@@ -29,6 +29,7 @@ export interface LanguageContent {
   admin: string;
   addIdea: string;
   export: string;
+  exportJSON: string;
   search: string;
   generateAI: string;
   submit: string;
@@ -69,6 +70,7 @@ export interface LanguageContent {
   aiThinking: string;
   refineAI: string;
   adoptAI: string;
+  quickSave: string;
   titleLabel: string;
   categoryLabel: string;
   descLabel: string;
@@ -77,6 +79,9 @@ export interface LanguageContent {
   copyLink: string;
   linkCopied: string;
   draftSaved: string;
+  voiceListen: string;
+  voiceError: string;
+  voiceNotSupported: string;
   categories: Record<IdeaCategory, string>;
 }
 
@@ -87,6 +92,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     admin: "Beheer",
     addIdea: "Idee Toevoegen",
     export: "Export (CSV)",
+    exportJSON: "Export (JSON)",
     search: "Zoeken...",
     generateAI: "AI Brainstorm",
     submit: "Idee Opslaan",
@@ -127,6 +133,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     aiThinking: "Gemini denkt na...",
     refineAI: "Verfijn met AI",
     adoptAI: "Dit idee uitwerken",
+    quickSave: "Snel Opslaan",
     titleLabel: "Titel",
     categoryLabel: "Categorie",
     descLabel: "Omschrijving",
@@ -135,6 +142,9 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     copyLink: "Kopieer Link",
     linkCopied: "Link gekopieerd!",
     draftSaved: "Concept automatisch opgeslagen",
+    voiceListen: "Aan het luisteren...",
+    voiceError: "Spraakherkenning fout.",
+    voiceNotSupported: "Browser ondersteunt geen spraak.",
     categories: {
       [IdeaCategory.TECHNOLOGY]: "Technologie",
       [IdeaCategory.COMMUNITY]: "Gemeenschap",
@@ -151,6 +161,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     admin: "Admin",
     addIdea: "Add Idea",
     export: "Export (CSV)",
+    exportJSON: "Export (JSON)",
     search: "Search...",
     generateAI: "AI Brainstorm",
     submit: "Save Idea",
@@ -191,6 +202,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     aiThinking: "Gemini is thinking...",
     refineAI: "Refine with AI",
     adoptAI: "Develop this idea",
+    quickSave: "Quick Save",
     titleLabel: "Title",
     categoryLabel: "Category",
     descLabel: "Description",
@@ -199,6 +211,9 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     copyLink: "Copy Link",
     linkCopied: "Link copied!",
     draftSaved: "Draft auto-saved",
+    voiceListen: "Listening...",
+    voiceError: "Voice error.",
+    voiceNotSupported: "Voice not supported.",
     categories: {
       [IdeaCategory.TECHNOLOGY]: "Technology",
       [IdeaCategory.COMMUNITY]: "Community",
@@ -215,6 +230,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     admin: "Admin",
     addIdea: "Añadir Idea",
     export: "Exportar (CSV)",
+    exportJSON: "Exportar (JSON)",
     search: "Buscar...",
     generateAI: "IA Brainstorm",
     submit: "Guardar Idea",
@@ -255,6 +271,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     aiThinking: "Gemini está pensando...",
     refineAI: "Refinar con IA",
     adoptAI: "Desarrollar esta idea",
+    quickSave: "Guardado Rápido",
     titleLabel: "Título",
     categoryLabel: "Categoría",
     descLabel: "Descripción",
@@ -263,6 +280,9 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     copyLink: "Copiar Enlace",
     linkCopied: "¡Enlace copiado!",
     draftSaved: "Borrador guardado",
+    voiceListen: "Escuchando...",
+    voiceError: "Error de voz.",
+    voiceNotSupported: "Voz no compatible.",
     categories: {
       [IdeaCategory.TECHNOLOGY]: "Tecnología",
       [IdeaCategory.COMMUNITY]: "Comunidad",
@@ -279,6 +299,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     admin: "Admin",
     addIdea: "Idee hinzufügen",
     export: "Export (CSV)",
+    exportJSON: "Export (JSON)",
     search: "Suchen...",
     generateAI: "KI Brainstorm",
     submit: "Idee speichern",
@@ -301,7 +322,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     engagement: "Gesamt-Engagement",
     activeCategories: "Aktive Kategorien",
     sortBy: "Sortieren nach:",
-    newest: "Neueste",
+    newest: "Nieuwste",
     mostLoved: "Beliebteste",
     bookmarks: "Gespeichert",
     selectIdeaPrompt: "Wähle eine Idee für Details",
@@ -319,6 +340,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     aiThinking: "Gemini denkt nach...",
     refineAI: "Mit KI verfeinern",
     adoptAI: "Diese Idee ausarbeiten",
+    quickSave: "Schnellspeichern",
     titleLabel: "Titel",
     categoryLabel: "Kategorie",
     descLabel: "Beschreibung",
@@ -327,12 +349,15 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     copyLink: "Link kopieren",
     linkCopied: "Link kopiert!",
     draftSaved: "Entwurf gespeichert",
+    voiceListen: "Hören...",
+    voiceError: "Sprachfehler.",
+    voiceNotSupported: "Sprache nicht unterstützt.",
     categories: {
       [IdeaCategory.TECHNOLOGY]: "Technologie",
       [IdeaCategory.COMMUNITY]: "Gemeinschaft",
       [IdeaCategory.SUSTAINABILITY]: "Nachhaltigkeit",
       [IdeaCategory.EDUCATION]: "Bildung",
-      [IdeaCategory.HEALTH]: "Gezondheid",
+      [IdeaCategory.HEALTH]: "Gesundheit",
       [IdeaCategory.ART]: "Kunst",
       [IdeaCategory.INCLUSION]: "Inklusion"
     }
@@ -343,6 +368,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     admin: "الإدارة",
     addIdea: "إضافة فكرة",
     export: "تصدير (CSV)",
+    exportJSON: "تصدير (JSON)",
     search: "بحث...",
     generateAI: "عصف ذهني ذكي",
     submit: "حفظ الفكرة",
@@ -383,6 +409,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     aiThinking: "جيميني يفكر...",
     refineAI: "تحسين بالذكاء الاصطناعي",
     adoptAI: "تطوير هذه الفكرة",
+    quickSave: "حفظ سريع",
     titleLabel: "العنوان",
     categoryLabel: "الفئة",
     descLabel: "الوصف",
@@ -391,6 +418,9 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     copyLink: "نسخ الرابط",
     linkCopied: "تم نسخ الرابط!",
     draftSaved: "تم حفظ المسودة",
+    voiceListen: "يسمع...",
+    voiceError: "خطأ صوتي.",
+    voiceNotSupported: "الصوت غير مدعوم.",
     categories: {
       [IdeaCategory.TECHNOLOGY]: "تكنولوجيا",
       [IdeaCategory.COMMUNITY]: "مجتمع",
@@ -407,6 +437,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     admin: "管理员",
     addIdea: "添加想法",
     export: "导出 (CSV)",
+    exportJSON: "导出 (JSON)",
     search: "搜索...",
     generateAI: "AI 头脑风暴",
     submit: "保存想法",
@@ -447,6 +478,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     aiThinking: "Gemini 正在思考...",
     refineAI: "使用 AI 优化",
     adoptAI: "开发此想法",
+    quickSave: "快速保存",
     titleLabel: "标题",
     categoryLabel: "类别",
     descLabel: "描述",
@@ -455,6 +487,9 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     copyLink: "复制链接",
     linkCopied: "链接已复制！",
     draftSaved: "草稿已保存",
+    voiceListen: "听...",
+    voiceError: "语音错误。",
+    voiceNotSupported: "不支持语音。",
     categories: {
       [IdeaCategory.TECHNOLOGY]: "技术",
       [IdeaCategory.COMMUNITY]: "社区",
@@ -471,6 +506,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     admin: "Адмін",
     addIdea: "Додати ідею",
     export: "Експорт (CSV)",
+    exportJSON: "Експорт (JSON)",
     search: "Пошук...",
     generateAI: "AI Мозковий штурм",
     submit: "Зберегти ідею",
@@ -511,6 +547,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     aiThinking: "Gemini думає...",
     refineAI: "Покращити за допомогою AI",
     adoptAI: "Розвинути цю ідею",
+    quickSave: "Швидке Збереження",
     titleLabel: "Заголовок",
     categoryLabel: "Категорія",
     descLabel: "Опис",
@@ -519,6 +556,9 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     copyLink: "Копіювати посилання",
     linkCopied: "Посилання скопійовано!",
     draftSaved: "Чернетку збережено",
+    voiceListen: "Слухати...",
+    voiceError: "Помилка голосу.",
+    voiceNotSupported: "Голос не підтримується.",
     categories: {
       [IdeaCategory.TECHNOLOGY]: "Технології",
       [IdeaCategory.COMMUNITY]: "Спільнота",
@@ -535,6 +575,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     admin: "Behear",
     addIdea: "Idee Tafoegje",
     export: "Eksport (CSV)",
+    exportJSON: "Eksport (JSON)",
     search: "Sykje...",
     generateAI: "AI Brainstoarm",
     submit: "Idee Opslaan",
@@ -575,6 +616,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     aiThinking: "Gemini tinkt nei...",
     refineAI: "Ferbetterje mei AI",
     adoptAI: "Dit idee útstald",
+    quickSave: "Fluch Opslaan",
     titleLabel: "Titel",
     categoryLabel: "Kategory",
     descLabel: "Beskriuwing",
@@ -583,6 +625,9 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     copyLink: "Kopiearje Link",
     linkCopied: "Link kopiearre!",
     draftSaved: "Konsept bewarre",
+    voiceListen: "Harkje...",
+    voiceError: "Stim flater.",
+    voiceNotSupported: "Stim net stipe.",
     categories: {
       [IdeaCategory.TECHNOLOGY]: "Technology",
       [IdeaCategory.COMMUNITY]: "Mienskip",
@@ -599,6 +644,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     admin: "Admin",
     addIdea: "Ajouter une idée",
     export: "Exporter (CSV)",
+    exportJSON: "Exporter (JSON)",
     search: "Rechercher...",
     generateAI: "Brainstorming IA",
     submit: "Enregistrer l'idée",
@@ -639,6 +685,7 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     aiThinking: "Gemini réfléchit...",
     refineAI: "Affiner avec l'IA",
     adoptAI: "Développer cette idée",
+    quickSave: "Enregistrement Rapide",
     titleLabel: "Titre",
     categoryLabel: "Catégorie",
     descLabel: "Description",
@@ -647,6 +694,9 @@ export const DICTIONARY: Record<SupportedLanguage, LanguageContent> = {
     copyLink: "Copier le lien",
     linkCopied: "Lien copié !",
     draftSaved: "Brouillon enregistré",
+    voiceListen: "Écoute...",
+    voiceError: "Erreur de voix.",
+    voiceNotSupported: "Voix non prise en charge.",
     categories: {
       [IdeaCategory.TECHNOLOGY]: "Technologie",
       [IdeaCategory.COMMUNITY]: "Communauté",
